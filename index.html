@@ -187,25 +187,6 @@ a{color:var(--cyan);text-decoration:none}
 <canvas id="bg-particles"></canvas>
 <div class="scanline"></div>
 
-<!-- 四角 HUD -->
-<div class="hud tl">
-  <div><b>坐标</b> N31°18′ · E120°35′</div>
-  <div class="dim">苏州 · 吴江经济技术开发区</div>
-  <div><b>数据源</b> DMS / 财务 / CRM / HR / BI</div>
-</div>
-<div class="hud tr">
-  <div><b>状态</b> <span style="color:var(--ok)">● 在线</span> 5 系统已接入</div>
-  <div class="dim">本体版本 v1.0 · 8 决策场景</div>
-</div>
-<div class="hud bl">
-  <div><b>门店</b> 10 子公司 · <b>品牌</b> 6 · <b>区域</b> 4</div>
-  <div class="dim">FPS <span id="hud-fps">--</span> · 节点 <span id="hud-nodes">0</span></div>
-</div>
-<div class="hud br">
-  <div><b>MINGLIAN GROUP</b> · DECISION OS</div>
-  <div class="dim" id="hud-ver">build 2026.08 · demo</div>
-</div>
-
 <!-- 顶部导航 -->
 <nav id="nav">
   <div class="brand-dot"></div>
@@ -948,6 +929,9 @@ function renderStoreList(){
       if(scenes.overview){ scenes.overview.highlight(curStore); scenes.overview.focus(curStore); }
     };
   });
+  // 滚动到选中门店(让点击的门店在列表可视区)
+  const sel = document.querySelector('#store-list .store-item[data-id="'+curStore+'"]');
+  if(sel) sel.scrollIntoView({block:'nearest', behavior:'smooth'});
 }
 function renderStoreDetail(id){
   const s = STORES.find(x=>x.id===id); if(!s) return;
@@ -1468,7 +1452,7 @@ async function initCity3D(){
     const hits = ray.intersectObjects(hitMeshes, false);
     if(hits.length){
       const storeId = hits[0].object.parent.userData.storeId;
-      curStore = storeId; renderStoreDetail(storeId); renderStoreSelect(); highlight(storeId); focusStore(storeId);
+      curStore = storeId; renderStoreDetail(storeId); renderStoreSelect(); renderStoreList(); highlight(storeId); focusStore(storeId);
     }
   }
   host.addEventListener('pointerdown', onDown);
@@ -1530,7 +1514,7 @@ async function initCity3D(){
       if(composer) composer.render(); else renderer.render(scene, camera);
     }
   };
-  document.getElementById('hud-nodes').textContent = STORES.length;
+  (()=>{const e=document.getElementById('hud-nodes'); if(e) e.textContent = STORES.length;})();
   // 俯冲聚焦开场(zoom 2.5 → 5.0, 900ms ease-out;用 setTimeout 兜底避免后台 rAF 暂停)
   (function intro(){
     const FROM = 2.5, TO = 5.0, DUR = 900, start = performance.now();
@@ -1636,7 +1620,7 @@ function initGraph(){
       const vis = KG.visible[m.key];
       m.sp.visible = vis; m.halo.visible = vis; m.label.visible = vis;
     });
-    document.getElementById('hud-nodes').textContent = Object.keys(KG.meshes).filter(id=>KG.visible[KG.meshes[id].key]).length;
+    (()=>{const e=document.getElementById('hud-nodes'); if(e) e.textContent = Object.keys(KG.meshes).filter(id=>KG.visible[KG.meshes[id].key]).length;})();
   }
 
   // 交互
@@ -1677,7 +1661,7 @@ function initGraph(){
     },
     resize(){ const w2=host.clientWidth,h2=host.clientHeight; camera.aspect=w2/h2; camera.updateProjectionMatrix(); renderer.setSize(w2,h2); }
   };
-  document.getElementById('hud-nodes').textContent = KG_NODES.length;
+  (()=>{const e=document.getElementById('hud-nodes'); if(e) e.textContent = KG_NODES.length;})();
 }
 window.kgReset = function(){
   if(scenes.graph) scenes.graph.reset();
@@ -2141,7 +2125,7 @@ function mainLoop(){
   // FPS
   fpsFrames++;
   if(performance.now()-fpsTime > 1000){
-    document.getElementById('hud-fps').textContent = fpsFrames;
+    (()=>{const e=document.getElementById('hud-fps'); if(e) e.textContent = fpsFrames;})();
     fpsFrames=0; fpsTime=performance.now();
   }
   if(currentPage==='overview' && scenes.overview) scenes.overview.animate(t);
