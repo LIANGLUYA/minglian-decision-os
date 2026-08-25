@@ -1148,58 +1148,62 @@ async function initCity3D(){
     });
   }
 
-  // 门店:低多边形建筑(裙楼 + 玻璃幕墙塔楼 + 楼顶信标 + 光柱)
+  // 门店:低楼层平面展厅(符合4S店业态)+ 悬浮点位标注(pin)
   const storeGroups = {};
-  const PODIUM_TOP = 0.28;
+  const HALL_W = 1.15, HALL_H = 0.30, HALL_D = 0.78; // 展厅长×高×深(单层,低矮)
+  const HALL_Y = HALL_H/2;                              // 展厅中心高度
+  const SIGN_Y = HALL_H + 0.05;                         // 屋顶品牌条高度
   STORES.forEach(s => {
     const grp = new THREE.Group();
     const brandC = BRAND_COLORS[s.brand] || '#64748b';
     const dimC = new THREE.Color('#5eead4');
     const wtex = windowTexture(brandC, 6, 14);
-    // 裙楼(固定)
-    const podium = new THREE.Mesh(new THREE.BoxGeometry(0.7, 0.24, 0.7),
-      new THREE.MeshStandardMaterial({color:0x0e1a22, roughness:0.6, metalness:0.35}));
-    podium.position.y = 0.13;
-    const pEd = new THREE.LineSegments(new THREE.EdgesGeometry(podium.geometry),
-      new THREE.LineBasicMaterial({color:new THREE.Color(brandC), transparent:true, opacity:0.5}));
-    pEd.position.copy(podium.position);
-    grp.add(podium); grp.add(pEd);
-    // 玻璃幕墙塔楼(高度=指标)
-    const tower = new THREE.Mesh(new THREE.BoxGeometry(0.45, 1, 0.45),
-      new THREE.MeshStandardMaterial({color:0xffffff, map:wtex, emissive:0xffffff, emissiveMap:wtex, emissiveIntensity:0.85, roughness:0.4, metalness:0.4}));
-    grp.add(tower);
-    const tEd = new THREE.LineSegments(new THREE.EdgesGeometry(tower.geometry),
-      new THREE.LineBasicMaterial({color:dimC, transparent:true, opacity:0.65}));
-    grp.add(tEd);
-    // 楼顶设备 + 信标
-    const roof = new THREE.Mesh(new THREE.BoxGeometry(0.34, 0.12, 0.34),
+    // 展厅主体(低矮玻璃展厅)
+    const hall = new THREE.Mesh(new THREE.BoxGeometry(HALL_W, HALL_H, HALL_D),
+      new THREE.MeshStandardMaterial({color:0x0d1a24, roughness:0.5, metalness:0.4, emissive:0x0a1620, emissiveIntensity:0.3}));
+    hall.position.y = HALL_Y;
+    const hEd = new THREE.LineSegments(new THREE.EdgesGeometry(hall.geometry),
+      new THREE.LineBasicMaterial({color:new THREE.Color(brandC), transparent:true, opacity:0.45}));
+    hEd.position.copy(hall.position);
+    grp.add(hall); grp.add(hEd);
+    // 正面落地玻璃幕墙带
+    const glass = new THREE.Mesh(new THREE.BoxGeometry(HALL_W*0.9, HALL_H*0.5, 0.02),
+      new THREE.MeshStandardMaterial({color:0xffffff, map:wtex, emissive:0xffffff, emissiveMap:wtex, emissiveIntensity:0.55, roughness:0.3, metalness:0.4}));
+    glass.position.set(0, HALL_Y, HALL_D/2 + 0.01);
+    grp.add(glass);
+    // 屋顶品牌色条带(店招)
+    const roofSign = new THREE.Mesh(new THREE.BoxGeometry(HALL_W, 0.06, HALL_D),
       new THREE.MeshStandardMaterial({color:new THREE.Color(brandC), emissive:new THREE.Color(brandC), emissiveIntensity:0.6, roughness:0.3}));
-    grp.add(roof);
-    const tip = new THREE.Mesh(new THREE.SphereGeometry(0.09, 14, 14),
-      new THREE.MeshBasicMaterial({color:dimC}));
-    grp.add(tip);
-    // 品牌辉光 + 光柱
-    const glow = glowSprite(brandC, 2.0); grp.add(glow);
-    const beam = new THREE.Mesh(new THREE.CylinderGeometry(0.1, 0.04, 1, 12, 1, true),
-      new THREE.MeshBasicMaterial({color:dimC, transparent:true, opacity:0.16, blending:THREE.AdditiveBlending, depthWrite:false, side:THREE.DoubleSide}));
-    grp.add(beam);
-    // 门牌 + 品牌logo发光牌 + 选中扫描环
-    const label = textSprite(s.name, '#e6e9f2', 24); grp.add(label);
-    const brandPlate = brandLogo(shortBrand(s.brand), brandC, 15); brandPlate.position.y = -0.75; grp.add(brandPlate);
-    const scanRing = new THREE.Mesh(new THREE.TorusGeometry(0.66, 0.025, 8, 48),
+    roofSign.position.y = SIGN_Y;
+    grp.add(roofSign);
+    // 地面辉光(指标映射:大小+亮度)
+    const glow = glowSprite(brandC, 2.2); glow.position.y = 0.05;
+    grp.add(glow);
+    // 点位标注 pin:细杆 + 顶部品牌logo圆盘 + 名称标签
+    const pin = new THREE.Mesh(new THREE.CylinderGeometry(0.03, 0.03, 0.75, 8),
+      new THREE.MeshBasicMaterial({color:dimC, transparent:true, opacity:0.7, blending:THREE.AdditiveBlending, depthWrite:false}));
+    pin.position.y = SIGN_Y + 0.375;
+    grp.add(pin);
+    const brandPlate = brandLogo(shortBrand(s.brand), brandC, 16);
+    brandPlate.position.y = SIGN_Y + 0.8; brandPlate.scale.set(0.85, 0.85, 1);
+    grp.add(brandPlate);
+    const label = textSprite(s.name, '#eaeef6', 26); label.position.y = SIGN_Y + 1.12;
+    grp.add(label);
+    // 选中扫描环
+    const scanRing = new THREE.Mesh(new THREE.TorusGeometry(HALL_W*0.6, 0.02, 8, 48),
       new THREE.MeshBasicMaterial({color:new THREE.Color(brandC), transparent:true, opacity:0.9, blending:THREE.AdditiveBlending}));
     scanRing.rotation.x = Math.PI/2; scanRing.visible = false; grp.add(scanRing);
     if(s.out){
-      tower.material = new THREE.MeshStandardMaterial({color:0x22303a, roughness:0.9});
-      roof.material = new THREE.MeshStandardMaterial({color:0x2a363f, roughness:0.9});
-      tEd.visible = false; tip.visible = false; beam.visible = false; glow.visible = false;
+      hall.material = new THREE.MeshStandardMaterial({color:0x22303a, roughness:0.9});
+      roofSign.material = new THREE.MeshStandardMaterial({color:0x2a363f, roughness:0.9});
+      hEd.visible = false; glass.visible = false; pin.visible = false; glow.visible = false;
     }
     const [px,pz] = projStore(s.lng, s.lat);
     grp.position.set(px, 0, pz);
-    grp.scale.setScalar(0.6); // 门店整体缩小(相对区划),但保留建模细节
+    grp.scale.setScalar(0.75); // 低矮展厅适当放大,细节更清晰
     grp.userData = {storeId:s.id};
     world.add(grp);
-    storeGroups[s.id] = {grp, tower, tEd, roof, tip, glow, beam, label, scanRing, brandC};
+    storeGroups[s.id] = {grp, hall, glass, roofSign, glow, pin, brandPlate, label, scanRing, brandC};
   });
 
   // 地标建模(旅游景点)
@@ -1392,29 +1396,24 @@ async function initCity3D(){
       let ratio;
       if(d.signed) ratio = Math.min(Math.abs(raw)/d.max, 1);
       else ratio = Math.min(raw/d.max, 1);
-      const H = 0.8 + ratio*3.2;
-      const top = PODIUM_TOP + H;
-      sg.tower.scale.y = H; sg.tower.position.y = PODIUM_TOP + H/2;
-      sg.tEd.scale.y = H; sg.tEd.position.y = PODIUM_TOP + H/2;
-      sg.roof.position.y = top + 0.06;
-      sg.tip.position.y = top + 0.18;
-      sg.glow.position.y = PODIUM_TOP + H*0.5;
-      sg.beam.position.y = top + 1.2; sg.beam.scale.y = 2.4;
-      sg.label.position.y = top + 0.85;
       if(!s.out){
         const c = new THREE.Color(d.signed ? (raw<0?'#ff4d4d':'#22d3a3') : d.color);
-        sg.tEd.material.color.copy(c);
-        sg.tip.material.color.copy(c);
-        sg.beam.material.color.copy(c);
-        // 建议1:辉光强度映射指标值(指标越高辉光越亮)
-        sg.glow.material.opacity = 0.2 + 0.65*ratio;
-        // 建议2:窗户亮灯数映射指标值(指标越高亮灯越多)
+        // 地面辉光:大小 + 亮度随指标映射(指标越高光斑越大越亮)
+        const gs = 1.6 + ratio*1.4;
+        sg.glow.scale.set(gs, gs, 1);
+        sg.glow.material.opacity = 0.25 + 0.55*ratio;
+        // pin 杆 + logo 圆盘外环随指标颜色
+        sg.pin.material.color.copy(c);
+        // 屋顶店招发光强度随指标
+        sg.roofSign.material.emissive.copy(c);
+        sg.roofSign.material.emissiveIntensity = 0.35 + 0.55*ratio;
+        // 玻璃幕墙亮灯数映射指标值(指标越高亮灯越多)
         const litRatio = 0.15 + 0.65*ratio;
         const wtex = windowTexture(sg.brandC, 6, 14, litRatio);
-        sg.tower.material.map = wtex;
-        sg.tower.material.emissiveMap = wtex;
-        sg.tower.material.emissiveIntensity = 0.4 + 0.6*ratio;
-        sg.tower.material.needsUpdate = true;
+        sg.glass.material.map = wtex;
+        sg.glass.material.emissiveMap = wtex;
+        sg.glass.material.emissiveIntensity = 0.35 + 0.55*ratio;
+        sg.glass.material.needsUpdate = true;
       }
     });
   }
@@ -1424,7 +1423,7 @@ async function initCity3D(){
     STORES.forEach(s=>{
       const sg = storeGroups[s.id]; if(!sg) return;
       const on = s.id===id;
-      sg.grp.scale.setScalar(on?0.72:0.6);
+      sg.grp.scale.setScalar(on?0.9:0.75);
       if(sg.scanRing) sg.scanRing.visible = on;
     });
   }
@@ -1448,7 +1447,7 @@ async function initCity3D(){
     mouse.x = ((e.clientX-r.left)/r.width)*2-1; mouse.y = -((e.clientY-r.top)/r.height)*2+1;
     ray.setFromCamera(mouse, camera);
     const hitMeshes = [];
-    Object.values(storeGroups).forEach(sg=>{ hitMeshes.push(sg.tower, sg.roof); });
+    Object.values(storeGroups).forEach(sg=>{ hitMeshes.push(sg.hall, sg.roofSign, sg.glass); });
     const hits = ray.intersectObjects(hitMeshes, false);
     if(hits.length){
       const storeId = hits[0].object.parent.userData.storeId;
@@ -1576,12 +1575,12 @@ function initGraph(){
   KG_NODES.forEach(n => {
     const lc = KG_LAYERS.find(l=>l.key===n.key).color;
     const sp = new THREE.Mesh(new THREE.SphereGeometry(nodeSize[n.key], 20, 20),
-      new THREE.MeshStandardMaterial({color:new THREE.Color(lc), emissive:new THREE.Color(lc), emissiveIntensity:0.45, roughness:0.3}));
+      new THREE.MeshStandardMaterial({color:new THREE.Color(lc), emissive:new THREE.Color(lc), emissiveIntensity:0.22, roughness:0.4}));
     sp.position.copy(posOf[n.id]);
     sp.userData = {id:n.id};
-    const halo = glowSprite(lc, nodeSize[n.key]*5);
-    halo.position.copy(posOf[n.id]);
-    const label = textSprite(n.label, '#eaeef6', 22); label.position.copy(posOf[n.id]).add(new THREE.Vector3(0,0.5,0)); label.scale.set(1.7,0.42,1);
+    const halo = glowSprite(lc, nodeSize[n.key]*2.2);
+    halo.position.copy(posOf[n.id]); halo.material.opacity = 0.35;
+    const label = textSprite(n.label, '#eef2f8', 38); label.position.copy(posOf[n.id]).add(new THREE.Vector3(0,nodeSize[n.key]*0.8+0.4,0)); label.scale.set(2.6,0.65,1);
     nodesGroup.add(sp); nodesGroup.add(halo); nodesGroup.add(label);
     meshMap[n.id] = {sp, halo, label, key:n.key};
   });
@@ -1640,13 +1639,13 @@ function initGraph(){
     if(hits.length){ highlightKGNode(hits[0].object.userData.id); showKGDetail(hits[0].object.userData.id); } else { hideKGDetail(); clearKGHighlight(); }
   });
   function highlightKGNode(id){
-    Object.values(KG.meshes).forEach(m=>{ m.sp.material.emissiveIntensity = 0.45; m.sp.scale.setScalar(1); });
+    Object.values(KG.meshes).forEach(m=>{ m.sp.material.emissiveIntensity = 0.22; m.sp.scale.setScalar(1); });
     const relIds = new Set(KG_EDGES.filter(e=>e[0]===id||e[1]===id).map(e=>e[0]===id?e[1]:e[0]));
     const sel = KG.meshes[id];
-    if(sel){ sel.sp.material.emissiveIntensity = 1.0; sel.sp.scale.setScalar(1.4); }
-    relIds.forEach(rid=>{ const rm = KG.meshes[rid]; if(rm){ rm.sp.material.emissiveIntensity = 0.8; rm.sp.scale.setScalar(1.18); } });
+    if(sel){ sel.sp.material.emissiveIntensity = 0.9; sel.sp.scale.setScalar(1.35); }
+    relIds.forEach(rid=>{ const rm = KG.meshes[rid]; if(rm){ rm.sp.material.emissiveIntensity = 0.6; rm.sp.scale.setScalar(1.15); } });
   }
-  function clearKGHighlight(){ Object.values(KG.meshes).forEach(m=>{ m.sp.material.emissiveIntensity = 0.45; m.sp.scale.setScalar(1); }); }
+  function clearKGHighlight(){ Object.values(KG.meshes).forEach(m=>{ m.sp.material.emissiveIntensity = 0.22; m.sp.scale.setScalar(1); }); }
 
   scenes.graph = {
     reset(){ rotY=0.2; targetY=0.2; rotX=0.2; targetX=0.2; zoom=1; KG.auto=true;
