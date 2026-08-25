@@ -1029,7 +1029,7 @@ async function initCity3D(){
   if(suzhouGeo && suzhouGeo.features && proj){
     suzhouGeo.features.forEach(f=>{
       try{
-        const name = f.properties.name;
+        const name = f.name;
         const cityC = SUZHOU_COLOR[name] || '#0ea5a5';
         const g = f.geometry;
         const polys = g.type==='Polygon'?[g.coordinates]:(g.type==='MultiPolygon'?g.coordinates:[]);
@@ -1061,7 +1061,7 @@ async function initCity3D(){
           const tube = new THREE.Mesh(new THREE.TubeGeometry(tubeCurve, 120, 0.02, 8),
             new THREE.MeshBasicMaterial({color:new THREE.Color(cityC), transparent:true, opacity:0.95}));
           mesh.add(tube);
-          const center = f.properties.center || f.properties.centroid || [JS_CX, JS_CZ];
+          const center = f.center || [JS_CX, JS_CZ];
           const [cx,cz] = proj(center[0], center[1]);
           const label = textSprite(name, cityC, 18);
           label.position.set(cx, 0.4, cz); world.add(label);
