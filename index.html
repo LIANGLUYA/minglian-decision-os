@@ -968,6 +968,8 @@ async function initCity3D(){
   }
   // 苏州区级 GeoJSON(9 区县)—— 内联数据,不依赖运行时网络请求
   const suzhouGeo = SUZHOU_GEO;
+  // 落点基准高度:区县 extrude 顶面在 0.24~0.55,落点对象(门店/地标/竞品/湖泊等)统一抬到区县顶面之上
+  const GROUND_Y = 0.6;
   let proj = null, JS_SCALE = 40, JS_CX = 120.62, JS_CZ = 31.30;
   // 门店/地标/竞品专用投影(与地图同比例,门店不再放大)
   const projStore = (lng,lat)=>[(lng-120.62)*40, (31.30-lat)*40];
@@ -1011,7 +1013,7 @@ async function initCity3D(){
   grid.position.y = -0.06; world.add(grid);
   const scanLine = new THREE.Mesh(new THREE.PlaneGeometry(40, 0.35),
     new THREE.MeshBasicMaterial({color:0x22d3a3, transparent:true, opacity:0.28, blending:THREE.AdditiveBlending, depthWrite:false}));
-  scanLine.rotation.x = -Math.PI/2; scanLine.position.y = 0.03; world.add(scanLine);
+  scanLine.rotation.x = -Math.PI/2; scanLine.position.y = GROUND_Y+0.08; world.add(scanLine);
 
   // 江苏 13 市已不渲染(聚焦苏州,只显示 9 区县细分,见下方 suzhouGeo)
   function ringArea(r){ let a=0; for(let i=0;i<r.length;i++){ const p1=r[i], p2=r[(i+1)%r.length]; a += p1[0]*p2[1]-p2[0]*p1[1]; } return Math.abs(a/2); }
@@ -1064,7 +1066,7 @@ async function initCity3D(){
           const center = f.center || [JS_CX, JS_CZ];
           const [cx,cz] = proj(center[0], center[1]);
           const label = textSprite(name, cityC, 18);
-          label.position.set(cx, 0.4, cz); world.add(label);
+          label.position.set(cx, depth+0.22, cz); world.add(label);
           // 区顶面街区网格(街区道路,表示城市肌理)
           const gridSize = 2.2, gy = depth + 0.05;
           const gx0 = cx - gridSize/2, gz0 = cz - gridSize/2;
@@ -1095,7 +1097,7 @@ async function initCity3D(){
         const [cx,cz] = projStore(sc.lng, sc.lat);
         const glow = new THREE.Mesh(new THREE.PlaneGeometry(3.5, 3.5),
           new THREE.MeshBasicMaterial({map:groundGlowTexture(sc.c), transparent:true, blending:THREE.AdditiveBlending, depthWrite:false}));
-        glow.rotation.x = -Math.PI/2; glow.position.set(cx, 0.06, cz);
+        glow.rotation.x = -Math.PI/2; glow.position.set(cx, GROUND_Y+0.06, cz);
         world.add(glow);
       }catch(e){}
     });
@@ -1152,7 +1154,7 @@ async function initCity3D(){
       hEd.visible = false; glass.visible = false; pin.visible = false; glow.visible = false;
     }
     const [px,pz] = projStore(s.lng, s.lat);
-    grp.position.set(px, 0, pz);
+    grp.position.set(px, GROUND_Y, pz);
     grp.scale.setScalar(0.75); // 低矮展厅适当放大,细节更清晰
     grp.userData = {storeId:s.id};
     world.add(grp);
@@ -1165,7 +1167,7 @@ async function initCity3D(){
     LANDMARKS.forEach(lm=>{
       try{
         const [lx,lz] = projStore(lm.lng, lm.lat);
-        const g = new THREE.Group(); g.position.set(lx, 0, lz);
+        const g = new THREE.Group(); g.position.set(lx, GROUND_Y, lz);
         if(lm.type==='tower'){ // 虎丘塔:多层塔身 + 金色尖顶
           for(let i=0;i<3;i++){
             const seg = new THREE.Mesh(new THREE.CylinderGeometry(0.22-i*0.05, 0.26-i*0.05, 0.4, 12),
@@ -1214,7 +1216,7 @@ async function initCity3D(){
     COMPETITORS.forEach(cp=>{
       try{
         const [cx,cz] = projStore(cp.lng, cp.lat);
-        const g = new THREE.Group(); g.position.set(cx, 0, cz);
+        const g = new THREE.Group(); g.position.set(cx, GROUND_Y, cz);
         const cc = cp.c || '#8b95a8';
         // 底座
         const base = new THREE.Mesh(new THREE.BoxGeometry(0.34, 0.1, 0.34),
@@ -1251,23 +1253,23 @@ async function initCity3D(){
       const [cx,cz] = projStore(lk.lng, lk.lat);
       const lake = new THREE.Mesh(new THREE.CircleGeometry(lk.r, 36),
         new THREE.MeshBasicMaterial({color:0x164b6e, transparent:true, opacity:0.55, depthWrite:false}));
-      lake.rotation.x = -Math.PI/2; lake.position.set(cx, 0.04, cz); world.add(lake);
+      lake.rotation.x = -Math.PI/2; lake.position.set(cx, GROUND_Y+0.04, cz); world.add(lake);
       const ring = new THREE.Mesh(new THREE.RingGeometry(lk.r-0.06, lk.r, 48),
         new THREE.MeshBasicMaterial({color:0x38bdf8, transparent:true, opacity:0.5, depthWrite:false, blending:THREE.AdditiveBlending}));
-      ring.rotation.x = -Math.PI/2; ring.position.set(cx, 0.05, cz); world.add(ring);
-      const label = textSprite(lk.name, '#38bdf8', 15); label.position.set(cx, 0.2, cz); world.add(label);
+      ring.rotation.x = -Math.PI/2; ring.position.set(cx, GROUND_Y+0.05, cz); world.add(ring);
+      const label = textSprite(lk.name, '#38bdf8', 15); label.position.set(cx, GROUND_Y+0.2, cz); world.add(label);
     }catch(e){}
   });
 
   // 苏州总部 → 无锡/连云港 弧形数据流动线(脉冲)
   const flows = [];
   const hqPos = projStore(120.62, 31.30);
-  const hq = new THREE.Vector3(hqPos[0], 0.3, hqPos[1]);
+  const hq = new THREE.Vector3(hqPos[0], GROUND_Y+0.3, hqPos[1]);
   const FLOW_CITIES = [[121.00,31.50,'#3b82f6'],[120.55,31.85,'#8b5cf6'],[120.80,31.70,'#f5b94a']];
   FLOW_CITIES.forEach(([lng,lat,c])=>{
     const p = projStore(lng,lat);
-    const to = new THREE.Vector3(p[0], 0.3, p[1]);
-    const mid = new THREE.Vector3((hq.x+to.x)/2, 1.5, (hq.z+to.z)/2);
+    const to = new THREE.Vector3(p[0], GROUND_Y+0.3, p[1]);
+    const mid = new THREE.Vector3((hq.x+to.x)/2, GROUND_Y+1.5, (hq.z+to.z)/2);
     const curve = new THREE.QuadraticBezierCurve3(hq.clone(), mid, to);
     const geom = new THREE.BufferGeometry().setFromPoints(curve.getPoints(30));
     const line = new THREE.Line(geom, new THREE.LineBasicMaterial({color:new THREE.Color(c), transparent:true, opacity:0.35, blending:THREE.AdditiveBlending, depthWrite:false}));
@@ -1288,14 +1290,14 @@ async function initCity3D(){
   ROADS.forEach(([a,b])=>{
     const pa = projStore(a[0],a[1]), pb = projStore(b[0],b[1]);
     const geom = new THREE.BufferGeometry().setFromPoints([
-      new THREE.Vector3(pa[0],0.05,pa[1]), new THREE.Vector3(pb[0],0.05,pb[1])]);
+      new THREE.Vector3(pa[0],GROUND_Y+0.05,pa[1]), new THREE.Vector3(pb[0],GROUND_Y+0.05,pb[1])]);
     const line = new THREE.Line(geom, new THREE.LineBasicMaterial({color:0x2a4a55, transparent:true, opacity:0.5}));
     world.add(line);
     for(let i=0;i<2;i++){
       const dot = new THREE.Mesh(new THREE.SphereGeometry(0.05,8,8),
         new THREE.MeshBasicMaterial({color:0x5eead4, transparent:true, opacity:0.9, blending:THREE.AdditiveBlending}));
       world.add(dot);
-      roadFlows.push({dot, a:new THREE.Vector3(pa[0],0.06,pa[1]), b:new THREE.Vector3(pb[0],0.06,pb[1]), t:Math.random(), sp:0.6+Math.random()*0.6});
+      roadFlows.push({dot, a:new THREE.Vector3(pa[0],GROUND_Y+0.06,pa[1]), b:new THREE.Vector3(pb[0],GROUND_Y+0.06,pb[1]), t:Math.random(), sp:0.6+Math.random()*0.6});
     }
   });
 
@@ -1307,9 +1309,9 @@ async function initCity3D(){
     try{
       const sp = projStore(s.lng, s.lat);
       const curve = new THREE.QuadraticBezierCurve3(
-        new THREE.Vector3(hqP[0], 0.35, hqP[1]),
-        new THREE.Vector3((hqP[0]+sp[0])/2, 1.0, (hqP[1]+sp[1])/2),
-        new THREE.Vector3(sp[0], 0.35, sp[1]));
+        new THREE.Vector3(hqP[0], GROUND_Y+0.35, hqP[1]),
+        new THREE.Vector3((hqP[0]+sp[0])/2, GROUND_Y+1.0, (hqP[1]+sp[1])/2),
+        new THREE.Vector3(sp[0], GROUND_Y+0.35, sp[1]));
       const geom = new THREE.BufferGeometry().setFromPoints(curve.getPoints(30));
       const line = new THREE.Line(geom, new THREE.LineBasicMaterial({color:0x5eead4, transparent:true, opacity:0.28, blending:THREE.AdditiveBlending, depthWrite:false}));
       world.add(line);
@@ -1430,7 +1432,7 @@ async function initCity3D(){
       camera.position.set(0, 13, 16);
       if(focusTarget){
         const ft = focusTarget.clone().applyAxisAngle(new THREE.Vector3(0,1,0), rotY);
-        camera.lookAt(ft.x, 0, ft.z);
+        camera.lookAt(ft.x, GROUND_Y, ft.z);
       } else {
         camera.lookAt(0,0,0);
       }
