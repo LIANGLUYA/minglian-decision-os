@@ -1,0 +1,2173 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>苏州明联集团 · 经营决策 OS</title>
+<!-- 全 CDN · 无构建 · 双击即开(需联网)。Three.js 用 UMD 全局构建,避免 importmap 在 file:// 下的兼容问题。 -->
+<script src="https://cdn.jsdelivr.net/npm/three@0.147.0/build/three.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.147.0/examples/js/shaders/CopyShader.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.147.0/examples/js/shaders/LuminosityHighPassShader.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.147.0/examples/js/postprocessing/EffectComposer.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.147.0/examples/js/postprocessing/RenderPass.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.147.0/examples/js/postprocessing/ShaderPass.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.147.0/examples/js/postprocessing/UnrealBloomPass.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/echarts@5.4.3/dist/echarts.min.js"></script>
+<style>
+:root{
+  --bg:#050b14; --bg2:#08101c;
+  --panel:rgba(10,16,28,0.85); --panel-solid:#0b1019;
+  --line:rgba(79,209,197,0.22); --line2:rgba(79,209,197,0.09);
+  --ok:#34d399; --cyan:#5eead4; --warn:#e6c15a; --danger:#f27070; --purple:#b5a8f7; --blue:#5ec8f7;
+  --brand:linear-gradient(135deg,#14b8a6,#3b82f6);
+  --txt:#eaeef6; --txt2:#9aa7bb; --txt3:#6e7d92;
+  --mono:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%}
+body{
+  background:var(--bg); color:var(--txt);
+  font-family:"PingFang SC","Microsoft YaHei",system-ui,sans-serif;
+  overflow:hidden; font-size:13px; line-height:1.55;
+}
+::-webkit-scrollbar{width:6px;height:6px}
+::-webkit-scrollbar-thumb{background:rgba(94,234,212,0.22);border-radius:3px}
+::-webkit-scrollbar-track{background:transparent}
+.mono{font-family:var(--mono);font-variant-numeric:tabular-nums}
+a{color:var(--cyan);text-decoration:none}
+
+/* ===== 全局背景 ===== */
+#bg-grid{position:fixed;inset:0;z-index:0;pointer-events:none;
+  background:
+    linear-gradient(rgba(94,234,212,0.035) 1px,transparent 1px) 0 0/44px 44px,
+    linear-gradient(90deg,rgba(94,234,212,0.035) 1px,transparent 1px) 0 0/44px 44px,
+    radial-gradient(ellipse at 50% 0%,rgba(59,130,246,0.10),transparent 60%),
+    radial-gradient(ellipse at 85% 100%,rgba(14,165,165,0.08),transparent 55%),
+    var(--bg);
+}
+#bg-particles{position:fixed;inset:0;z-index:1;pointer-events:none}
+.scanline{position:fixed;left:0;right:0;height:150px;z-index:2;pointer-events:none;
+  background:linear-gradient(180deg,transparent,rgba(94,234,212,0.05) 50%,transparent);
+  animation:scan 9s linear infinite}
+@keyframes scan{0%{top:-160px}100%{top:100%}}
+
+/* ===== 四角 HUD(面试题氛围) ===== */
+.hud{position:fixed;z-index:46;pointer-events:none;font-family:var(--mono);font-size:10px;
+  color:var(--txt3);letter-spacing:.5px;line-height:1.7}
+.hud b{color:var(--cyan);font-weight:500}
+.hud .dim{color:var(--txt2)}
+.hud.tl{top:64px;left:16px}.hud.tr{top:64px;right:16px;text-align:right}
+.hud.bl{bottom:12px;left:16px}.hud.br{bottom:12px;right:16px;text-align:right}
+
+/* ===== 玻璃面板 ===== */
+.glass{background:var(--panel);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);
+  border:1px solid var(--line2);border-radius:10px;position:relative}
+.glass::before,.glass::after{content:"";position:absolute;width:10px;height:10px;border:1px solid var(--cyan);opacity:.5}
+.glass::before{top:-1px;left:-1px;border-right:none;border-bottom:none}
+.glass::after{bottom:-1px;right:-1px;border-left:none;border-top:none}
+
+/* ===== 顶部导航 ===== */
+#nav{position:fixed;top:0;left:0;right:0;height:56px;z-index:50;
+  background:linear-gradient(180deg,rgba(4,8,15,0.96),rgba(4,8,15,0.55));
+  border-bottom:1px solid var(--line2);display:flex;align-items:center;padding:0 18px;gap:20px}
+.brand-dot{width:12px;height:12px;border-radius:50%;background:var(--brand);position:relative;flex-shrink:0}
+.brand-dot::after{content:"";position:absolute;inset:-6px;border-radius:50%;border:1px solid var(--cyan);animation:ring 2.4s ease-out infinite}
+@keyframes ring{0%{transform:scale(.6);opacity:.9}100%{transform:scale(2.3);opacity:0}}
+.brand-name{font-size:17px;font-weight:600;letter-spacing:1px;white-space:nowrap;
+  background:var(--brand);-webkit-background-clip:text;background-clip:text;color:transparent}
+.brand-sub{font-size:10px;color:var(--txt3);letter-spacing:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.nav-tabs{display:flex;gap:5px;margin-left:6px;overflow-x:auto;scrollbar-width:none}
+.nav-tabs::-webkit-scrollbar{display:none}
+.nav-tab{padding:7px 14px;font-size:13px;color:var(--txt2);cursor:pointer;border-radius:6px;
+  border:1px solid transparent;transition:.18s;white-space:nowrap;user-select:none}
+.nav-tab:hover{color:var(--txt);background:rgba(94,234,212,0.06)}
+.nav-tab.active{color:var(--cyan);border-color:var(--line);background:rgba(94,234,212,0.08);
+  box-shadow:0 0 12px rgba(94,234,212,0.15) inset}
+.nav-tab.active::after{content:"";position:absolute;bottom:-1px;left:20%;right:20%;height:2px;
+  background:var(--cyan);box-shadow:0 0 8px var(--cyan)}
+.nav-right{margin-left:auto;display:flex;align-items:center;gap:14px}
+.clock{font-family:var(--mono);font-size:13px;color:var(--cyan);letter-spacing:1px;text-shadow:0 0 8px rgba(94,234,212,0.4)}
+.speed-btns{display:flex;gap:4px}
+.speed-btn{padding:3px 9px;font-size:11px;font-family:var(--mono);color:var(--txt2);
+  background:rgba(255,255,255,0.03);border:1px solid var(--line2);border-radius:4px;cursor:pointer}
+.speed-btn.active{color:var(--warn);border-color:var(--warn);box-shadow:0 0 8px rgba(245,185,74,0.3)}
+
+/* ===== 页面容器 ===== */
+.page{position:fixed;top:56px;left:0;right:0;bottom:0;z-index:10;display:none;overflow:hidden;
+  animation:fadeIn .28s ease}
+.page.active{display:block}
+@keyframes fadeIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+.page-inner{position:absolute;inset:0;padding:12px;display:flex;flex-direction:column;gap:10px;overflow:hidden}
+
+/* ===== 通用组件 ===== */
+.panel-title{display:flex;align-items:center;gap:8px;font-size:12px;color:var(--cyan);
+  letter-spacing:1px;margin-bottom:9px;text-transform:uppercase}
+.panel-title::before{content:"";width:3px;height:13px;background:var(--cyan);box-shadow:0 0 6px var(--cyan)}
+.panel-title .en{color:var(--txt3);font-size:9px;letter-spacing:1px;font-family:var(--mono)}
+.kpi-card{padding:12px 14px}
+.kpi-label{font-size:11px;color:var(--txt2);margin-bottom:5px}
+.kpi-val{font-family:var(--mono);font-size:25px;font-weight:600;color:var(--txt);line-height:1.1}
+.kpi-unit{font-size:12px;color:var(--txt2);margin-left:2px;font-weight:400}
+.kpi-trend{font-size:11px;margin-top:4px;font-family:var(--mono);color:var(--txt3)}
+.up{color:var(--ok)}.down{color:var(--danger)}.warn{color:var(--warn)}
+.tag{display:inline-block;padding:1px 7px;font-size:10px;border-radius:3px;font-family:var(--mono);border:1px solid currentColor;opacity:.9}
+.row{display:flex;gap:10px}.col{flex:1;min-width:0}
+.hr{height:1px;background:var(--line2);margin:8px 0}
+.glow{text-shadow:0 0 10px currentColor}
+
+/* ===== 维度/角色 Tab ===== */
+.dim-tabs{display:flex;gap:5px;align-items:center}
+.dim-tab{padding:4px 11px;font-size:11px;color:var(--txt2);cursor:pointer;border-radius:4px;
+  border:1px solid var(--line2);transition:.15s;user-select:none;white-space:nowrap}
+.dim-tab:hover{color:var(--txt)}
+.dim-tab.active{color:var(--cyan);border-color:var(--line);background:rgba(94,234,212,0.08)}
+
+/* ===== 表格 ===== */
+.tbl{width:100%;border-collapse:collapse;font-size:11px}
+.tbl th{color:var(--txt3);font-weight:500;text-align:left;padding:5px 6px;border-bottom:1px solid var(--line2);
+  font-size:10px;letter-spacing:.5px;white-space:nowrap}
+.tbl td{padding:5px 6px;border-bottom:1px solid rgba(94,234,212,0.05);font-family:var(--mono);white-space:nowrap}
+.tbl tr:hover td{background:rgba(94,234,212,0.04)}
+.tbl .num{text-align:right}
+.tbl .nm{color:var(--txt)}
+.bar-cell{height:6px;border-radius:3px;background:rgba(255,255,255,0.06);overflow:hidden;min-width:40px}
+.bar-cell i{display:block;height:100%;background:linear-gradient(90deg,#0ea5a5,#5eead4);border-radius:3px}
+
+/* ===== 图表容器 ===== */
+.chart{width:100%;height:100%;min-height:0}
+
+/* ===== 决策驾驶舱 ===== */
+.scn-card{border:1px solid var(--line2);border-radius:8px;padding:10px 12px;cursor:pointer;
+  background:rgba(255,255,255,0.015);transition:.15s;margin-bottom:8px}
+.scn-card:hover{border-color:var(--line);background:rgba(94,234,212,0.05)}
+.scn-card.open{border-color:var(--line);background:rgba(94,234,212,0.06)}
+.scn-head{display:flex;align-items:center;gap:8px}
+.scn-g{font-family:var(--mono);font-size:10px;color:var(--cyan);border:1px solid var(--cyan);border-radius:3px;padding:0 5px}
+.scn-name{font-size:13px;color:var(--txt);font-weight:500}
+.scn-role{margin-left:auto;font-size:10px;color:var(--txt3)}
+.scn-body{display:none;margin-top:9px;font-size:11px;color:var(--txt2);line-height:1.7}
+.scn-card.open .scn-body{display:block}
+.chain{font-family:var(--mono);font-size:10px;color:var(--txt3)}
+.chain b{color:var(--cyan);font-weight:500}
+@keyframes fadeUp{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}
+
+/* ===== 知识图谱 ===== */
+.kg-filter{display:flex;align-items:center;gap:7px;padding:5px 0;cursor:pointer;font-size:11px;color:var(--txt2)}
+.kg-filter .sw{width:26px;height:14px;border-radius:8px;background:rgba(255,255,255,0.08);position:relative;transition:.15s}
+.kg-filter .sw::after{content:"";position:absolute;top:2px;left:2px;width:10px;height:10px;border-radius:50%;background:#566073;transition:.15s}
+.kg-filter.on{color:var(--txt)}
+.kg-filter.on .sw{background:rgba(94,234,212,0.35)}
+.kg-filter.on .sw::after{left:14px;background:var(--cyan);box-shadow:0 0 6px var(--cyan)}
+.kg-dot{width:8px;height:8px;border-radius:50%;display:inline-block;margin-right:5px}
+
+/* ===== 品牌矩阵 ===== */
+.brand-item{display:flex;align-items:center;gap:8px;padding:6px 8px;border-radius:6px;background:rgba(255,255,255,0.02)}
+.brand-item .bname{font-size:12px;color:var(--txt)}
+.brand-item .bcnt{margin-left:auto;font-size:10px;color:var(--txt3);font-family:var(--mono)}
+
+/* ===== 日志流 ===== */
+.log-line{font-size:10px;color:var(--txt3);font-family:var(--mono);padding:2px 0;line-height:1.6;border-left:2px solid transparent;padding-left:7px}
+.log-line.sense{border-left-color:var(--cyan)}
+.log-line.reason{border-left-color:var(--warn)}
+.log-line.decide{border-left-color:var(--purple)}
+.log-line.act{border-left-color:var(--ok)}
+.log-line b{color:var(--txt2);font-weight:500}
+
+/* ===== 门店详情 ===== */
+.detail-item{display:flex;justify-content:space-between;align-items:center;padding:5px 0;border-bottom:1px dashed rgba(94,234,212,0.08);font-size:11px}
+.detail-item .k{color:var(--txt3)}
+.detail-item .v{font-family:var(--mono);color:var(--txt)}
+.select-store{width:100%;background:rgba(255,255,255,0.03);color:var(--txt);border:1px solid var(--line2);
+  border-radius:5px;padding:5px 8px;font-size:12px;outline:none}
+.select-store option{background:#0a0e18;color:var(--txt)}
+</style>
+</head>
+<body>
+<div id="bg-grid"></div>
+<canvas id="bg-particles"></canvas>
+<div class="scanline"></div>
+
+<!-- 四角 HUD -->
+<div class="hud tl">
+  <div><b>坐标</b> N31°18′ · E120°35′</div>
+  <div class="dim">苏州 · 吴江经济技术开发区</div>
+  <div><b>数据源</b> DMS / 财务 / CRM / HR / BI</div>
+</div>
+<div class="hud tr">
+  <div><b>状态</b> <span style="color:var(--ok)">● 在线</span> 5 系统已接入</div>
+  <div class="dim">本体版本 v1.0 · 8 决策场景</div>
+</div>
+<div class="hud bl">
+  <div><b>门店</b> 10 子公司 · <b>品牌</b> 6 · <b>区域</b> 4</div>
+  <div class="dim">FPS <span id="hud-fps">--</span> · 节点 <span id="hud-nodes">0</span></div>
+</div>
+<div class="hud br">
+  <div><b>MINGLIAN GROUP</b> · DECISION OS</div>
+  <div class="dim" id="hud-ver">build 2026.08 · demo</div>
+</div>
+
+<!-- 顶部导航 -->
+<nav id="nav">
+  <div class="brand-dot"></div>
+  <div style="display:flex;flex-direction:column;line-height:1.2">
+    <div class="brand-name">苏州明联集团 · 经营决策 OS</div>
+    <div class="brand-sub">MINGLIAN GROUP · DECISION OPERATING SYSTEM</div>
+  </div>
+  <div class="nav-tabs">
+    <div class="nav-tab active" data-page="overview">集团总览</div>
+    <div class="nav-tab" data-page="graph">知识图谱</div>
+    <div class="nav-tab" data-page="cockpit">角色驾驶舱</div>
+  </div>
+</nav>
+
+<!-- ================= 页面1:集团总览 ================= -->
+<section id="page-overview" class="page active">
+  <div class="page-inner" style="display:grid;grid-template-columns:270px 1fr 300px;gap:10px">
+    <!-- 左列 -->
+    <div style="display:flex;flex-direction:column;gap:10px;overflow:auto;min-width:0">
+      <div class="glass" style="padding:12px">
+        <div class="panel-title">集团画像 <span class="en">GROUP PROFILE</span></div>
+        <div id="profile-grid" style="display:grid;grid-template-columns:1fr 1fr;gap:8px"></div>
+      </div>
+      <div class="glass" style="padding:12px;flex:1;min-height:260px">
+        <div class="panel-title">八大经营指标 <span class="en">8-DIM KPI</span></div>
+        <div id="radar-chart" class="chart" style="height:250px"></div>
+      </div>
+      <div class="glass" style="padding:12px">
+        <div class="panel-title">决策日志 <span class="en">DECISION STREAM</span></div>
+        <div id="log-stream" style="height:170px;overflow:auto"></div>
+      </div>
+    </div>
+    <!-- 中列 -->
+    <div style="display:flex;flex-direction:column;gap:10px;min-width:0">
+      <div class="glass" style="flex:1;min-height:0;position:relative;overflow:hidden">
+        <div style="position:absolute;top:10px;left:14px;z-index:5;display:flex;align-items:center;gap:12px">
+          <div class="panel-title" style="margin:0">集团门店分布 <span class="en">DEALER NETWORK · 2.5D</span></div>
+          <div class="dim-tabs" id="city-dims"></div>
+        </div>
+        <div id="city3d" style="position:absolute;inset:0;cursor:grab"></div>
+        <div style="position:absolute;bottom:10px;left:50%;transform:translateX(-50%);z-index:5;
+          color:var(--txt3);font-size:10px;font-family:var(--mono);pointer-events:none">
+          拖拽旋转 · 滚轮缩放 · 点击光柱查看门店
+        </div>
+      </div>
+      <div class="glass" style="padding:10px">
+        <div class="panel-title">核心 KPI <span class="en">CORE KPI</span></div>
+        <div id="kpi-grid" style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px"></div>
+      </div>
+    </div>
+    <!-- 右列 -->
+    <div style="display:flex;flex-direction:column;gap:10px;overflow:auto;min-width:0">
+      <div class="glass" style="padding:12px">
+        <div class="panel-title">门店详情 <span class="en">STORE DETAIL</span></div>
+        <select class="select-store" id="store-select"></select>
+        <div id="store-list" style="margin-top:8px;display:flex;flex-direction:column;gap:4px;max-height:320px;overflow:auto"></div>
+        <div id="store-detail" style="margin-top:8px"></div>
+      </div>
+      <div class="glass" style="padding:12px">
+        <div class="panel-title">品牌矩阵 <span class="en">BRAND MATRIX</span></div>
+        <div id="brand-list" style="display:flex;flex-direction:column;gap:6px"></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+
+<!-- ================= 页面5:知识图谱 ================= -->
+<section id="page-graph" class="page">
+  <div style="position:absolute;inset:0">
+    <canvas id="kg-canvas" style="width:100%;height:100%;display:block"></canvas>
+  </div>
+  <div class="glass" style="position:absolute;left:14px;top:14px;padding:13px;width:200px;z-index:5">
+    <div class="panel-title">本体图层 <span class="en">LAYERS</span></div>
+    <div id="kg-filters"></div>
+    <div class="hr"></div>
+    <div style="display:flex;flex-direction:column;gap:6px">
+      <button class="speed-btn" style="padding:6px;cursor:pointer" onclick="kgReset()">重置视角</button>
+      <button class="speed-btn" id="kg-rotate-btn" style="padding:6px;cursor:pointer" onclick="kgToggleRotate()">自动旋转:开</button>
+    </div>
+    <div class="hr"></div>
+    <div style="font-size:10px;color:var(--txt3);line-height:1.6">
+      <div><span class="kg-dot" style="background:var(--cyan)"></span>目标 Goal</div>
+      <div><span class="kg-dot" style="background:var(--warn)"></span>角色 Role</div>
+      <div><span class="kg-dot" style="background:var(--purple)"></span>模型 Model</div>
+      <div><span class="kg-dot" style="background:var(--blue)"></span>指标 Indicator</div>
+      <div><span class="kg-dot" style="background:var(--ok)"></span>业务实体 Entity</div>
+    </div>
+  </div>
+  <div id="kg-detail" class="glass" style="position:absolute;right:14px;top:14px;padding:15px;width:300px;z-index:5;display:none;max-height:82%;overflow:auto">
+    <div id="kg-detail-content"></div>
+  </div>
+  <div style="position:absolute;left:50%;bottom:12px;transform:translateX(-50%);z-index:5;
+    color:var(--txt3);font-size:10px;font-family:var(--mono);pointer-events:none">
+    拖拽旋转 · 滚轮缩放 · 点击节点查看详情
+  </div>
+</section>
+
+<!-- ================= 页面6:决策驾驶舱(角色驾驶舱) ================= -->
+<section id="page-cockpit" class="page">
+  <div class="page-inner" style="overflow:auto">
+    <div class="dim-tabs" id="cockpit-roles" style="justify-content:center;margin-bottom:4px"></div>
+    <div class="dim-tabs" id="cockpit-boards" style="justify-content:center;margin-bottom:8px"></div>
+    <div id="cockpit-board" style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:10px"></div>
+    <div id="cockpit-content" style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;align-content:start"></div>
+  </div>
+</section>
+
+<script>
+"use strict";
+/* ================================================================
+ * 苏州明联集团 · 经营决策 OS —— 单文件 Demo
+ * 数据来源:门店调研(苏州明联.md) + 本体 TTL + 两套 Excel 看板锚点
+ * ================================================================ */
+
+/* ================= 工具 ================= */
+const $ = s => document.querySelector(s);
+const $$ = s => Array.from(document.querySelectorAll(s));
+const esc = s => String(s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const fmt = n => (n==null||isNaN(n)) ? '—' : Number(n).toLocaleString('zh-CN');
+const pct = n => (n==null) ? '—' : (n>=0?'+':'') + n + '%';
+const sign = n => (n>=0?'+':'') + Number(n).toFixed(1);
+const MONEY = n => Math.abs(n)>=100000000 ? (n/100000000).toFixed(2)+'亿' : (Math.abs(n)>=10000 ? (n/10000).toFixed(0)+'万' : fmt(n));
+
+/* ================= ECharts 主题 ================= */
+const C = { txt:'#9aa7bb', txt2:'#6e7d92', cyan:'#5eead4', split:'rgba(79,209,197,0.08)' };
+const axisLabel = {color:C.txt, fontSize:10};
+const splitLine = {lineStyle:{color:C.split}};
+const tipStyle = {backgroundColor:'rgba(9,15,26,0.96)', borderColor:'rgba(94,234,212,0.3)',
+  textStyle:{color:'#e6e9f2', fontSize:11}, extraCssText:'box-shadow:0 0 16px rgba(0,0,0,.5)'};
+const charts = [];
+
+/* ================= 品牌颜色 ================= */
+const BRAND_COLORS = {
+  '一汽-大众':'#3b82f6','东风本田':'#ef4444','广汽本田':'#f59e0b','捷达':'#06b6d4',
+  '华为问界':'#8b5cf6','新能源':'#22d3a3','恒驰':'#64748b','待确认':'#64748b'
+};
+
+/* ================= 门店数据(10 子公司) ================= */
+const REGIONS = [
+  {name:'苏州', x:0, z:0, w:4.2, d:4.2, c:'#0ea5a5'},
+  {name:'无锡', x:4.2, z:0.6, w:2.0, d:1.6, c:'#3b82f6'},
+  {name:'连云港', x:6.4, z:2.6, w:1.8, d:1.6, c:'#8b5cf6'},
+  {name:'广西北海', x:2.2, z:-4.8, w:1.7, d:1.5, c:'#06b6d4'},
+  {name:'广西桂林', x:4.8, z:-5.6, w:1.7, d:1.5, c:'#06b6d4'}
+];
+const STORES = [
+  {id:'debao',    name:'苏州德宝',   brand:'一汽-大众', region:'苏州', city:'苏州', lng:120.63, lat:31.26, sales:620, inv:28, profit:0.6, cust:5.8, note:'吴中区·一汽-大众4S店', staff:41},
+  {id:'baolong',  name:'苏州宝隆',   brand:'东风本田', region:'苏州', city:'苏州', lng:120.62, lat:31.30, sales:1577, inv:42, profit:3.8, cust:12.0, note:'姑苏区核心·连续5年江苏省销量第一·白金钥匙奖全国第九', staff:120, star:true},
+  {id:'baokang',  name:'苏州宝康',   brand:'广汽本田', region:'苏州', city:'苏州', lng:120.57, lat:31.33, sales:540, inv:24, profit:1.2, cust:4.6, note:'虎丘区·注册资本4000万', staff:48},
+  {id:'mingrui',  name:'苏州明锐',   brand:'新能源', region:'苏州', city:'苏州', lng:120.61, lat:31.41, sales:280, inv:12, profit:0.5, cust:2.0, note:'相城区·新能源转型店', staff:18},
+  {id:'liande',   name:'苏州联德',   brand:'一汽-大众', region:'苏州', city:'苏州', lng:120.66, lat:31.17, sales:320, inv:14, profit:0.4, cust:2.8, note:'吴江区·一汽-大众二店', staff:16},
+  {id:'debaoc',   name:'德宝车业',   brand:'一汽-大众', region:'苏州', city:'苏州', lng:120.59, lat:31.28, sales:520, inv:22, profit:0.5, cust:4.9, note:'姑苏区·2004吴江首家一汽-大众', staff:38},
+  {id:'xutian',   name:'无锡旭田',   brand:'东风本田', region:'无锡', city:'苏州周边', lng:121.00, lat:31.50, sales:460, inv:20, profit:0.4, cust:3.2, note:'苏州东·昆山方向', staff:30},
+  {id:'lingsai',  name:'连云港领赛', brand:'华为问界', region:'连云港', city:'苏州周边', lng:120.55, lat:31.85, sales:380, inv:18, profit:0.6, cust:2.1, note:'苏州北·张家港方向·新能源', staff:28},
+  {id:'beihai',   name:'北海格利',   brand:'捷达', region:'广西北海', city:'苏州周边', lng:120.70, lat:31.05, sales:280, inv:12, profit:0.3, cust:1.5, note:'苏州南·吴江南·12家直营', staff:8},
+  {id:'guilin',   name:'桂林格利',   brand:'捷达', region:'广西桂林', city:'苏州周边', lng:120.80, lat:31.70, sales:320, inv:14, profit:0.1, cust:1.8, note:'苏州东北·常熟方向', staff:12}
+];
+
+/* 江苏地标(旅游景点) */
+const LANDMARKS = [
+  {name:'拙政园', type:'garden', lng:120.63, lat:31.32, city:'苏州', note:'苏州园林·世界遗产'},
+  {name:'虎丘塔', type:'tower', lng:120.57, lat:31.33, city:'苏州', note:'苏州地标·千年斜塔'},
+  {name:'寒山寺', type:'temple', lng:120.57, lat:31.31, city:'苏州', note:'姑苏城外寒山寺'},
+  {name:'太湖', type:'lake', lng:120.50, lat:31.22, city:'苏州', note:'中国五大淡水湖'},
+  {name:'鼋头渚', type:'garden', lng:120.78, lat:31.60, city:'苏州周边', note:'太湖第一胜境'},
+  {name:'灵山大佛', type:'temple', lng:120.62, lat:31.72, city:'苏州周边', note:'88米青铜大佛'},
+  {name:'花果山', type:'mountain', lng:120.92, lat:31.80, city:'苏州周边', note:'西游记·花果山'}
+];
+
+/* 竞品 4S 店(苏州主城区 + 园区周边) */
+const COMPETITORS = [
+  {name:'宝诚宝马', brand:'宝马', lng:120.66, lat:31.30, c:'#0066b1'},
+  {name:'利星奔驰', brand:'奔驰', lng:120.69, lat:31.28, c:'#00a8a0'},
+  {name:'奥保奥迪', brand:'奥迪', lng:120.71, lat:31.33, c:'#bb0a30'},
+  {name:'中升雷克萨斯', brand:'雷克萨斯', lng:120.59, lat:31.36, c:'#9c8e7e'},
+  {name:'永达沃尔沃', brand:'沃尔沃', lng:120.54, lat:31.29, c:'#003057'},
+  {name:'特斯拉苏州', brand:'特斯拉', lng:120.70, lat:31.32, c:'#e82127', newEnergy:true},
+  {name:'蔚来空间', brand:'蔚来', lng:120.68, lat:31.30, c:'#00c1d4', newEnergy:true},
+  {name:'理想汽车', brand:'理想', lng:120.73, lat:31.29, c:'#00a8c6', newEnergy:true},
+  {name:'小鹏汽车', brand:'小鹏', lng:120.75, lat:31.31, c:'#00a3e0', newEnergy:true},
+  {name:'比亚迪', brand:'比亚迪', lng:120.65, lat:31.27, c:'#8a8a8a', newEnergy:true},
+  {name:'东昌别克', brand:'别克', lng:120.72, lat:31.26, c:'#c1c1c1'},
+  {name:'一汽丰田', brand:'丰田', lng:120.74, lat:31.25, c:'#eb0a1e'},
+  {name:'东风日产', brand:'日产', lng:120.77, lat:31.28, c:'#c3002f'},
+  {name:'保时捷中心', brand:'保时捷', lng:120.80, lat:31.35, c:'#d5001c', luxury:true},
+  {name:'凯迪拉克', brand:'凯迪拉克', lng:120.78, lat:31.33, c:'#a98a5b'},
+  {name:'捷豹路虎', brand:'捷豹路虎', lng:120.82, lat:31.37, c:'#6b8e23', luxury:true}
+];
+
+/* 首页维度定义(光柱高度依据) */
+const DIMS = [
+  {key:'sales',  name:'销量',   unit:'台',  max:1600, color:'#5eead4', signed:false},
+  {key:'inv',    name:'库存',   unit:'百万元', max:45,  color:'#e6c15a', signed:false},
+  {key:'profit', name:'利润',   unit:'百万元', max:4,   color:'#22d3a3', signed:true},
+  {key:'cust',   name:'客户',   unit:'千人', max:12,  color:'#38bdf8', signed:false}
+];
+let curDim = 'sales';
+let curStore = 'baolong';
+
+/* ================= 集团画像 ================= */
+const GROUP = [
+  {k:'成立', v:'2019', sub:'05-28'},
+  {k:'注册资本', v:'2000万', sub:'李旭辉'},
+  {k:'总部', v:'苏州吴江', sub:'交通路4195号'},
+  {k:'员工', v:'500-999', sub:'集团轻·门店重'},
+  {k:'子公司', v:'10 家', sub:'多品牌'},
+  {k:'品牌', v:'6 个', sub:'燃油+新能源'}
+];
+const BRANDS = [
+  {n:'一汽-大众', c:'#3b82f6', cnt:'4店'},
+  {n:'东风本田', c:'#ef4444', cnt:'2店·销冠'},
+  {n:'广汽本田', c:'#f59e0b', cnt:'1店'},
+  {n:'捷达', c:'#06b6d4', cnt:'12直营+20网点'},
+  {n:'华为问界AITO', c:'#8b5cf6', cnt:'1店·新能源'},
+  {n:'新能源', c:'#22d3a3', cnt:'1店·转型'}
+];
+const RADAR = [
+  {name:'库存管理', val:62, target:80},{name:'售后毛利', val:75, target:85},
+  {name:'销售毛利', val:48, target:70},{name:'市场线索', val:55, target:75},
+  {name:'客户关系', val:40, target:65},{name:'人力资源', val:58, target:75},
+  {name:'财务利润', val:35, target:60},{name:'成本内控', val:52, target:72}
+];
+const KPIS = [
+  {label:'集团 ROS', val:-3.02, unit:'%', trend:'行业均值 3.2%', dir:'down', target:'目标 ≥5%'},
+  {label:'库存资金占用', val:1.2, unit:'亿', trend:'库龄>90天占比 18%', dir:'warn', target:'目标降 20%'},
+  {label:'线索转化率', val:20, unit:'%', trend:'目标 35-40%', dir:'warn', target:'AI赋能 +15pct'},
+  {label:'Agent 决策覆盖', val:0, unit:'%', trend:'待启动', dir:'up', target:'目标 50%+'}
+];
+const LOGS = [
+  {t:'sense', x:'[感知] 库存 LHGCM1001 库龄 100 天 > 阈值 90 天 → 触发预警'},
+  {t:'reason', x:'[推理] 命中规则:库存积压 ∧ 周转低 → 调价清库'},
+  {t:'decide', x:'[决策] Recommend(price_cut_clearance) 置信度 100%'},
+  {t:'act', x:'[行动] 方案A:降价1万,预计7天售出,净止损 ¥1832.6'},
+  {t:'sense', x:'[感知] 融资集中度 AFC 60% > 阈值 50% → 触发预警'},
+  {t:'decide', x:'[决策] 加权融资成本率 6.2% → 目标 4.1%'},
+  {t:'sense', x:'[感知] 售后客户保持率 38% < 阈值 40% → 流失预警'},
+  {t:'act', x:'[行动] 启动流失客户召回话术,提前 6 个月预警'},
+  {t:'sense', x:'[感知] 人力成本占比 24% > 阈值 18% → 人效预警'},
+  {t:'reason', x:'[推理] 命中规则:人力占比高 ∧ 人均产值低 → 优化配置'}
+];
+function startLogStream(){
+  const el = document.getElementById('log-stream');
+  if(!el || window._logTimer) return;
+  let idx = 0;
+  const pad = n => String(n).padStart(2,'0');
+  const push = ()=>{
+    const l = LOGS[idx % LOGS.length]; idx++;
+    const now = new Date();
+    const ts = `${pad(now.getHours())}:${pad(now.getMinutes())}:${pad(now.getSeconds())}`;
+    const div = document.createElement('div');
+    div.className = 'log-line ' + l.t;
+    div.innerHTML = `<b>${ts}</b> ${esc(l.x)}`;
+    div.style.animation = 'fadeUp .4s';
+    el.insertBefore(div, el.firstChild);
+    while(el.childNodes.length > 18) el.removeChild(el.lastChild);
+  };
+  el.innerHTML = '';
+  for(let i=0;i<8;i++) push();
+  window._logTimer = setInterval(push, 2600);
+}
+
+/* ================= 销售页数据 ================= */
+const SALES = {
+  funnel: [
+    {name:'线索', v:1200},{name:'有效线索', v:780},{name:'进店', v:430},{name:'试驾', v:210},{name:'成交', v:120}
+  ],
+  gp: [
+    {name:'裸车毛利 GP1', v:-0.5, c:'#ff4d4d'},
+    {name:'商务返利', v:0.8, c:'#5eead4'},
+    {name:'增值业务', v:0.6, c:'#38bdf8'},
+    {name:'综合 GP3', v:0.9, c:'#22d3a3'}
+  ],
+  rank: [
+    {n:'张三', cr:42, v:18},{n:'李四', cr:38, v:16},{n:'王五', cr:35, v:14},
+    {n:'赵六', cr:30, v:12},{n:'孙七', cr:28, v:11},{n:'周八', cr:24, v:9}
+  ],
+  trend: {months:['1月','2月','3月','4月','5月','6月'], v:[21,27,31,36,38,47]},
+  roi: [
+    {n:'汽车之家', cost:6.5, leads:240, deal:18, roi:1.9},
+    {n:'懂车帝', cost:5.2, leads:190, deal:13, roi:1.4},
+    {n:'DCC外呼', cost:3.0, leads:320, deal:30, roi:3.6},
+    {n:'转介绍', cost:0.8, leads:90, deal:22, roi:11.0},
+    {n:'自然进店', cost:2.0, leads:160, deal:20, roi:4.5}
+  ],
+  rebate: [
+    {d:'Q1 雅阁', p:'雅阁Q1销量返利', t:'销量', a:80000},
+    {d:'Q2 皓影', p:'皓影专项返利', t:'专项', a:50000},
+    {d:'半年度', p:'广宣补贴', t:'补贴', a:30000},
+    {d:'型格', p:'金融贴息', t:'贴息', a:25000}
+  ],
+  policy: [
+    {t:'销量奖励', std:'≥160台', coef:'3%'},
+    {t:'价格奖励', std:'价格合规', coef:'2%'},
+    {t:'信贷奖励', std:'渗透率', coef:'1.5%'},
+    {t:'保险奖励', std:'渗透率', coef:'1%'},
+    {t:'精品奖励', std:'每车加装', coef:'2000元/车'}
+  ]
+};
+
+/* ================= 库存页数据 ================= */
+const INV = {
+  models:['雅阁','冠道','皓影','缤智','凌派','奥德赛','型格'],
+  // 每车型 4 段库龄:0-30 / 30-60 / 60-90 / 90+
+  stack:[
+    {name:'雅阁', v:[18,10,6,5]},{name:'冠道', v:[8,5,4,3]},
+    {name:'皓影', v:[14,7,3,2]},{name:'缤智', v:[12,6,2,1]},
+    {name:'凌派', v:[9,5,3,2]},{name:'奥德赛', v:[6,3,2,2]},
+    {name:'型格', v:[10,6,4,4]}
+  ],
+  cap:[
+    {n:'雅阁', v:42},{n:'冠道', v:28},{n:'皓影', v:33},{n:'缤智', v:21},{n:'凌派', v:16},{n:'奥德赛', v:19},{n:'型格', v:18}
+  ],
+  aging:[
+    {name:'0-30天', v:77, c:'#22d3a3'},{name:'30-60天', v:42, c:'#f5b94a'},
+    {name:'60-90天', v:24, c:'#f97316'},{name:'90天+', v:19, c:'#ff4d4d'}
+  ],
+  vin:[
+    {v:'LHGCM1001', m:'雅阁', days:110, cost:165000, int:6, fin:2911, occ:167911, flag:'积压'},
+    {v:'LHGCM1042', m:'冠道', days:95, cost:215000, int:6, fin:3355, occ:218355, flag:'积压'},
+    {v:'LHGCM1077', m:'皓影', days:72, cost:165000, int:6, fin:1953, occ:166953, flag:'预警'},
+    {v:'LHGCM1120', m:'型格', days:60, cost:138000, int:6, fin:1361, occ:139361, flag:'预警'},
+    {v:'LHGCM1185', m:'雅阁', days:35, cost:165000, int:6, fin:950, occ:165950, flag:'正常'},
+    {v:'LHGCM1231', m:'缤智', days:28, cost:120000, int:6, fin:552, occ:120552, flag:'正常'},
+    {v:'LHGCM1280', m:'凌派', days:18, cost:105000, int:6, fin:311, occ:105311, flag:'正常'}
+  ]
+};
+
+/* ================= 资金页数据(真实锚点) ================= */
+const CAP = {
+  source:[
+    {n:'AFC 财务公司', v:1200, rate:7.68, c:'#ff4d4d'},
+    {n:'银承', v:700, rate:3.6, c:'#22d3a3'},
+    {n:'信用证(招行)', v:450, rate:3.25, c:'#38bdf8'},
+    {n:'法人透支', v:200, rate:7.0, c:'#f97316'},
+    {n:'押汇', v:150, rate:6.0, c:'#f5b94a'}
+  ],
+  // 加权成本率 6.2% → 目标 4.1%
+  ros:{ // 单位:万元
+    income:613.5, totalIncome:637.3, cost:603.0, directFee:20.2, indirectFee:32.7,
+    profit:-18.5, rosPct:-3.02
+  },
+  lines:[
+    {n:'新车', income:592.4, cost:572.0, contrib:6.9, c:'#ff4d4d'},
+    {n:'维修', income:44.9, cost:31.1, contrib:7.2, c:'#22d3a3'},
+    {n:'二手车', income:0, cost:0, contrib:0, c:'#64748b'},
+    {n:'其他', income:0, cost:0, contrib:0, c:'#64748b'}
+  ],
+  quality:[ // 17 项指标(三维度) 取代表值
+    {name:'ROE', v:28, dim:'盈利性'},{name:'ROA', v:22, dim:'盈利性'},{name:'ROI', v:18, dim:'盈利性'},
+    {name:'EVA', v:8, dim:'盈利性'},{name:'ROS', v:-15, dim:'盈利性'},
+    {name:'资产周转', v:55, dim:'成长性'},{name:'整车周转', v:48, dim:'成长性'},{name:'资金周转', v:42, dim:'成长性'},
+    {name:'销量增长', v:60, dim:'成长性'},{name:'返利增长', v:52, dim:'成长性'},
+    {name:'抗风险-流动性', v:40, dim:'抗风险'},{name:'抗风险-负债', v:35, dim:'抗风险'},
+    {name:'抗风险-集中度', v:30, dim:'抗风险'},{name:'售后保持', v:38, dim:'抗风险'},
+    {name:'长库龄占比', v:18, dim:'抗风险'},{name:'费用率', v:76, dim:'抗风险'},{name:'库存深度', v:66, dim:'抗风险'}
+  ],
+  kpi21:[
+    {f:'FF1 整体绩效', k:'税前利润', v:5680665, u:'元'},
+    {f:'FF1 整体绩效', k:'销售综合毛利', v:727025, u:'元'},
+    {f:'FF2 单车费用', k:'单台总费用', v:13197.94, u:'元'},
+    {f:'FF3 销量规模', k:'新车销量', v:287, u:'台'},
+    {f:'FF4 售后产值', k:'售后交车台次', v:6064, u:'台'},
+    {f:'FF5 售后毛利', k:'售后综合毛利', v:8520000, u:'元'},
+    {f:'FF6 费用管控', k:'总费用', v:3787810, u:'元'}
+  ]
+};
+
+/* ================= 知识图谱数据(取自本体 TTL) ================= */
+const KG_LAYERS = [
+  {key:'goal',   name:'公司层 · 目标',   color:'#5eead4', desc:'公司战略/业务目标,8 个 Goal 覆盖销售经理与总经理两层决策'},
+  {key:'role',   name:'公司层 · 角色',   color:'#f5b94a', desc:'职责锚点,店长/销售经理/总经理 3 个角色'},
+  {key:'model',  name:'认知层 · 模型',   color:'#a78bfa', desc:'业务决策模型,8 个 Model 对应 8 个决策场景'},
+  {key:'ind',    name:'认知层 · 指标',   color:'#38bdf8', desc:'Goal 的量化方式,17 个 Indicator'},
+  {key:'entity', name:'执行层 · 实体',   color:'#22d3a3', desc:'Action 作用的业务对象,17 个业务实体'}
+];
+const KG_NODES = [
+  // 公司层
+  {id:'G001', key:'goal', label:'降低库存资金占用', tag:'Goal'},
+  {id:'G002', key:'goal', label:'提升库存周转', tag:'Goal'},
+  {id:'G003', key:'goal', label:'提升线索转化率', tag:'Goal'},
+  {id:'G004', key:'goal', label:'提升返利实现率', tag:'Goal'},
+  {id:'G005', key:'goal', label:'降低融资成本', tag:'Goal'},
+  {id:'G006', key:'goal', label:'提升 ROS', tag:'Goal'},
+  {id:'G007', key:'goal', label:'优化利润结构', tag:'Goal'},
+  {id:'G008', key:'goal', label:'控制费用率', tag:'Goal'},
+  {id:'R店长', key:'role', label:'店长', tag:'Role'},
+  {id:'R销售经理', key:'role', label:'销售经理', tag:'Role'},
+  {id:'R总经理', key:'role', label:'总经理', tag:'Role'},
+  // 认知决策层
+  {id:'M001', key:'model', label:'利润拆解模型', tag:'Model'},
+  {id:'M002', key:'model', label:'库存周转模型', tag:'Model'},
+  {id:'M003', key:'model', label:'成交概率预测', tag:'Model'},
+  {id:'M004', key:'model', label:'返利测算模型', tag:'Model'},
+  {id:'M005', key:'model', label:'融资成本模型', tag:'Model'},
+  {id:'M006', key:'model', label:'利润归因模型', tag:'Model'},
+  {id:'M007', key:'model', label:'业务线对比模型', tag:'Model'},
+  {id:'M008', key:'model', label:'费用拆解模型', tag:'Model'},
+  {id:'I_库龄', key:'ind', label:'库龄', tag:'Ind'},{id:'I_周转', key:'ind', label:'车型周转率', tag:'Ind'},
+  {id:'I_库存系数', key:'ind', label:'库存系数', tag:'Ind'},{id:'I_月均销量', key:'ind', label:'月均销量', tag:'Ind'},
+  {id:'I_线索评分', key:'ind', label:'线索评分', tag:'Ind'},{id:'I_顾问成交率', key:'ind', label:'顾问成交率', tag:'Ind'},
+  {id:'I_距目标差量', key:'ind', label:'距目标差量', tag:'Ind'},{id:'I_预估返利', key:'ind', label:'预估返利', tag:'Ind'},
+  {id:'I_净收益', key:'ind', label:'冲量净收益', tag:'Ind'},{id:'I_各渠道利率', key:'ind', label:'各渠道利率', tag:'Ind'},
+  {id:'I_加权成本率', key:'ind', label:'加权成本率', tag:'Ind'},{id:'I_ROS', key:'ind', label:'经营利润率ROS', tag:'Ind'},
+  {id:'I_毛利率', key:'ind', label:'综合毛利率', tag:'Ind'},{id:'I_费用率', key:'ind', label:'费用率', tag:'Ind'},
+  {id:'I_各线贡献占比', key:'ind', label:'各线贡献占比', tag:'Ind'},{id:'I_各线毛利率', key:'ind', label:'各线毛利率', tag:'Ind'},
+  {id:'I_单车费用', key:'ind', label:'单车费用', tag:'Ind'},
+  // 执行对象层
+  {id:'Vehicle', key:'entity', label:'车辆 VIN', tag:'实体'},
+  {id:'Customer', key:'entity', label:'客户', tag:'实体'},
+  {id:'Lead', key:'entity', label:'线索', tag:'实体'},
+  {id:'SalesOrder', key:'entity', label:'销售订单', tag:'实体'},
+  {id:'ServiceOrder', key:'entity', label:'售后工单', tag:'实体'},
+  {id:'Dealer', key:'entity', label:'经销商', tag:'实体'},
+  {id:'Employee', key:'entity', label:'员工', tag:'实体'},
+  {id:'VehicleModel', key:'entity', label:'车型', tag:'实体'},
+  {id:'FinancingLedger', key:'entity', label:'融资台账', tag:'实体'},
+  {id:'RebateAccount', key:'entity', label:'返利账户', tag:'实体'},
+  {id:'RebatePolicy', key:'entity', label:'返利政策', tag:'实体'},
+  {id:'Expense', key:'entity', label:'费用', tag:'实体'},
+  {id:'MarketingActivity', key:'entity', label:'市场活动', tag:'实体'},
+  {id:'SalesTarget', key:'entity', label:'销售目标', tag:'实体'},
+  {id:'AccountReceivable', key:'entity', label:'应收账款', tag:'实体'},
+  {id:'FixedAsset', key:'entity', label:'固定资产', tag:'实体'},
+  {id:'UsedCar', key:'entity', label:'二手车', tag:'实体'}
+];
+// 关系 [from, to, 关系标签, 类型key]
+const KG_EDGES = [
+  ['R店长','G001','负责','role'], ['R销售经理','G002','负责','role'], ['R销售经理','G003','负责','role'], ['R销售经理','G004','负责','role'],
+  ['R总经理','G005','负责','role'], ['R总经理','G006','负责','role'], ['R总经理','G007','负责','role'], ['R总经理','G008','负责','role'],
+  ['G001','I_库龄','量化','goal'], ['G001','I_周转','量化','goal'], ['G002','I_库存系数','量化','goal'], ['G002','I_月均销量','量化','goal'],
+  ['G003','I_线索评分','量化','goal'], ['G003','I_顾问成交率','量化','goal'], ['G004','I_距目标差量','量化','goal'], ['G004','I_预估返利','量化','goal'], ['G004','I_净收益','量化','goal'],
+  ['G005','I_各渠道利率','量化','goal'], ['G005','I_加权成本率','量化','goal'], ['G006','I_ROS','量化','goal'], ['G006','I_毛利率','量化','goal'], ['G006','I_费用率','量化','goal'],
+  ['G007','I_各线贡献占比','量化','goal'], ['G007','I_各线毛利率','量化','goal'], ['G008','I_费用率','量化','goal'], ['G008','I_单车费用','量化','goal'],
+  ['M001','I_库龄','消费','model'], ['M001','I_周转','消费','model'], ['M001','G001','服务','model'],
+  ['M002','I_库存系数','消费','model'], ['M002','I_月均销量','消费','model'], ['M002','G002','服务','model'],
+  ['M003','I_线索评分','消费','model'], ['M003','I_顾问成交率','消费','model'], ['M003','G003','服务','model'],
+  ['M004','I_距目标差量','消费','model'], ['M004','I_预估返利','消费','model'], ['M004','I_净收益','消费','model'], ['M004','G004','服务','model'],
+  ['M005','I_各渠道利率','消费','model'], ['M005','I_加权成本率','消费','model'], ['M005','G005','服务','model'],
+  ['M006','I_ROS','消费','model'], ['M006','I_毛利率','消费','model'], ['M006','I_费用率','消费','model'], ['M006','G006','服务','model'],
+  ['M007','I_各线贡献占比','消费','model'], ['M007','I_各线毛利率','消费','model'], ['M007','G007','服务','model'],
+  ['M008','I_费用率','消费','model'], ['M008','I_单车费用','消费','model'], ['M008','G008','服务','model'],
+  // 执行对象层内部关系
+  ['Vehicle','Dealer','在库','entity'], ['Vehicle','VehicleModel','属于','entity'],
+  ['SalesOrder','Vehicle','包含','entity'], ['SalesOrder','Customer','下单','entity'], ['SalesOrder','Employee','顾问','entity'],
+  ['Lead','Employee','分配','entity'], ['Lead','Customer','归属','entity'], ['ServiceOrder','Vehicle','服务','entity'],
+  ['Employee','Dealer','任职','entity'], ['RebatePolicy','RebateAccount','定义','entity'],
+  ['Expense','Dealer','归属','entity'], ['MarketingActivity','Dealer','活动','entity'],
+  ['SalesTarget','Dealer','目标','entity'], ['SalesTarget','VehicleModel','车型','entity'],
+  ['AccountReceivable','Customer','应收','entity'], ['FixedAsset','Dealer','资产','entity'], ['UsedCar','Vehicle','置换','entity']
+];
+const KG_REL_COLOR = {role:'#f5b94a', goal:'#5eead4', model:'#a78bfa', entity:'#22d3a3'};
+
+/* ================= 决策驾驶舱数据 ================= */
+const SCENARIOS = [
+  {g:'G001', goal:'降低库存资金占用', name:'库存调价清库', role:'店长', module:'库存', roleKey:'R店长',
+    chain:[
+      ['感知','DMS 库存快照 → VIN 库龄 95 天 > 90 天阈值 → 标记"积压"'],
+      ['感知','打款入库明细 → 计息基数×年化率×95/365 = 已耗财务费用 1.2 万'],
+      ['推理','利润拆解模型 → 含息成本 17万 + 已耗 1.2万 = 总成本 18.2万;指导价 19万 → 毛利仅 0.8万'],
+      ['决策','方案A 降1万7天售出 / 方案B 降0.5万搭精品 / 方案C 调拨他店 → 选 A'],
+      ['行动','price_cut_clearance:写 hasDiscount,更新 vehicleStatus']
+    ]},
+  {g:'G002', goal:'提升库存周转', name:'补货进货', role:'销售经理', module:'库存', roleKey:'R销售经理',
+    chain:[
+      ['感知','DMS 库存系数 = 现有库存/月均销量 → 思域 0.6 低于 0.8 正常线'],
+      ['推理','库存周转模型 → 缺货风险,补货量 = 下月目标×资金占用 + 安全库存'],
+      ['决策','建议进货 9 台,资金 153 万(下月目标12 + 安全库存5 − 在库3)'],
+      ['行动','purchase_request:创建采购订单,写 batchNo/入库日期']
+    ]},
+  {g:'G003', goal:'提升线索转化率', name:'线索分配', role:'销售经理', module:'销售', roleKey:'R销售经理',
+    chain:[
+      ['感知','CRM 今日 23 条待跟进线索,5 条评分 > 80 且意向车型有库存'],
+      ['推理','成交概率模型 → 线索评分×顾问成交率×车型匹配度 → 概率 > 60%'],
+      ['决策','分配给张三(历史 CR-V 成交率 42%,未达负载上限)'],
+      ['行动','lead_assign:写 leadAssignedTo,更新 leadStatus']
+    ]},
+  {g:'G004', goal:'提升返利实现率', name:'返利冲量', role:'销售经理', module:'销售', roleKey:'R销售经理',
+    chain:[
+      ['感知','商务政策测算 → 距阶梯返利目标差 32 台'],
+      ['推理','返利测算模型 → 冲量返利 80万,降价促销损失约 30万'],
+      ['决策','净收益 +50 万 > 0 → 冲量拿返利'],
+      ['行动','rebate_strategy:触发促销,写返利策略标记']
+    ]},
+  {g:'G005', goal:'降低融资成本', name:'融资渠道选择', role:'总经理', module:'财务', roleKey:'R总经理',
+    chain:[
+      ['感知','财务 → AFC 7.68% / 银承 3.6% / 信用证 3.25% / 法人透支 7.0% / 押汇 6.0%'],
+      ['推理','融资成本模型 → 加权成本率 = Σ(余额×利率)/总余额 = 6.2%'],
+      ['决策','银承增 500万 + 信用证增 300万,减 AFC 800万 → 成本率降至 4.1%'],
+      ['行动','financing_strategy:更新 FinancingLedger 的 terms 与余额']
+    ]},
+  {g:'G006', goal:'提升 ROS', name:'经营诊断', role:'总经理', module:'财务', roleKey:'R总经理',
+    chain:[
+      ['感知','ROS 利润表 → 经营利润 -18.5万,ROS = -3.02%'],
+      ['推理','利润归因模型 → 新车裸车毛利为负靠返利补,售后贡献主力,费用率偏高'],
+      ['决策','优先提升售后产值与控制费用,不做全员降价促销'],
+      ['行动','ros_improvement:削减 Expense,调整 Dealer 资源']
+    ]},
+  {g:'G007', goal:'优化利润结构', name:'资源配置', role:'总经理', module:'财务', roleKey:'R总经理',
+    chain:[
+      ['感知','四业务线 → 新车贡献 6.9万(49%) / 维修 7.2万(51%),二手车未开展'],
+      ['推理','业务线对比模型 → 利润过度依赖售后'],
+      ['决策','加大售后投入 + 开展二手车业务 + 控制新车亏损'],
+      ['行动','resource_allocation:更新 Dealer 预算分配']
+    ]},
+  {g:'G008', goal:'控制费用率', name:'费用管控', role:'总经理', module:'财务', roleKey:'R总经理',
+    chain:[
+      ['感知','费用现状 → 人力成本 150 万占营收 24% > 行业基准 18%'],
+      ['推理','费用拆解模型 → 人效偏低,变动费用偏高'],
+      ['决策','优化编制 + 调整提成结构 + 市场费用削减 20万 → 费用率降至 18%'],
+      ['行动','expense_control:削减 Expense 金额,调整人员编制']
+    ]}
+];
+/* What-If 推演参数(决策驾驶舱互动) */
+const WHATIF = {
+  G001:{label:'降价幅度', unit:'万', min:0.3, max:2, step:0.1, val:1, calc:v=>'预计 '+(v>=1?'7天':'15天')+' 售出 · 净止损 ¥'+Math.round(2500-v*800)},
+  G002:{label:'补货台数', unit:'台', min:3, max:15, step:1, val:9, calc:v=>'资金占用 '+Math.round(v*17)+'万 · 周转率 '+(v/12).toFixed(1)},
+  G003:{label:'分配线索数', unit:'条', min:1, max:10, step:1, val:5, calc:v=>'预计转化 '+Math.round(v*0.6)+'单 · 线索转化率 '+(18+v*2)+'%'},
+  G004:{label:'冲量台数', unit:'台', min:10, max:60, step:5, val:32, calc:v=>'返利 +'+Math.round(v*2.5)+'万 · 促销损失 -'+Math.round(v*0.9)+'万 · 净收益 +'+Math.round(v*1.6)+'万'},
+  G005:{label:'银承增加', unit:'万', min:100, max:1000, step:100, val:500, calc:v=>'加权成本率降至 '+(6.2-v*0.0042).toFixed(1)+'% · 年省利息 '+Math.round(v*0.04)+'万'},
+  G006:{label:'费用削减', unit:'万', min:5, max:50, step:5, val:20, calc:v=>'费用率降至 '+(61.7-v*0.4).toFixed(1)+'% · ROS '+(v*0.08-3).toFixed(1)+'%'},
+  G007:{label:'售后投入', unit:'万', min:10, max:80, step:5, val:40, calc:v=>'售后产值 +'+Math.round(v*3)+'万 · 售后利润占比 '+(51+v*0.2).toFixed(0)+'%'},
+  G008:{label:'市场费削减', unit:'万', min:5, max:40, step:5, val:20, calc:v=>'费用率降至 '+(61.7-v*0.5).toFixed(1)+'% · 年省 '+v+'万'}
+};
+
+/* ================================================================
+ * 路由 + 全局氛围
+ * ================================================================ */
+let currentPage = 'overview';
+const pageInited = {};
+function showPage(name){
+  currentPage = name;
+  $$('.page').forEach(p => p.classList.remove('active'));
+  const sec = document.getElementById('page-'+name);
+  if(sec) sec.classList.add('active');
+  $$('.nav-tab').forEach(t => t.classList.toggle('active', t.dataset.page === name));
+  // 懒加载各页
+  if(name==='overview' && !pageInited.overview){ pageInited.overview=true; initOverview(); }
+  if(name==='graph' && !pageInited.graph){ pageInited.graph=true; initGraph(); }
+  if(name==='cockpit' && !pageInited.cockpit){ pageInited.cockpit=true; initCockpit(); }
+  // 尺寸修正
+  setTimeout(()=>charts.forEach(c=>{ try{c.resize()}catch(e){} }), 40);
+  // 智能问答悬浮窗只在角色驾驶舱显示
+  const qaFloat = document.getElementById('qa-float');
+  if(qaFloat) qaFloat.style.display = name==='cockpit' ? 'block' : 'none';
+}
+$$('.nav-tab').forEach(t => t.onclick = () => showPage(t.dataset.page));
+
+/* 深链:支持 index.html#sales 直接打开对应页 */
+function applyHash(){
+  const h = (location.hash || '').replace('#','');
+  if(h && document.getElementById('page-'+h) && h !== currentPage) showPage(h);
+}
+addEventListener('hashchange', applyHash);
+
+/* 粒子背景 */
+function initParticles(){
+  const c = document.getElementById('bg-particles');
+  if(!c) return;
+  const ctx = c.getContext('2d');
+  let W,H,ps;
+  function rs(){
+    W = c.width = innerWidth; H = c.height = innerHeight;
+    ps = Array.from({length:70}, ()=>({x:Math.random()*W, y:Math.random()*H, r:Math.random()*1.4+0.4,
+      s:Math.random()*0.3+0.05, a:Math.random()*0.5+0.1}));
+  }
+  rs(); addEventListener('resize', rs);
+  (function loop(){
+    ctx.clearRect(0,0,W,H);
+    for(const p of ps){
+      p.y -= p.s; if(p.y < -5) p.y = H+5;
+      ctx.beginPath(); ctx.arc(p.x, p.y, p.r, 0, 7);
+      ctx.fillStyle = 'rgba(94,234,212,'+p.a.toFixed(2)+')'; ctx.fill();
+    }
+    requestAnimationFrame(loop);
+  })();
+}
+initParticles();
+
+/* ================================================================
+ * Three.js 工具(共享)
+ * ================================================================ */
+function textSprite(text, color, size=28){
+  const cv = document.createElement('canvas'); cv.width=512; cv.height=128;
+  const g = cv.getContext('2d');
+  g.font = 'bold '+size+'px "PingFang SC","Microsoft YaHei",sans-serif';
+  g.textAlign='center'; g.textBaseline='middle';
+  g.shadowColor = color; g.shadowBlur = 16; g.fillStyle = color;
+  g.fillText(text, 256, 64);
+  const tex = new THREE.CanvasTexture(cv); tex.minFilter = THREE.LinearFilter;
+  const sp = new THREE.Sprite(new THREE.SpriteMaterial({map:tex, transparent:true, depthWrite:false}));
+  sp.scale.set(3.2, 0.8, 1);
+  return sp;
+}
+function glowSprite(color, s=2.6){
+  const cv = document.createElement('canvas'); cv.width=cv.height=128;
+  const g = cv.getContext('2d');
+  const grad = g.createRadialGradient(64,64,0,64,64,64);
+  grad.addColorStop(0, color+'cc'); grad.addColorStop(0.5, color+'33'); grad.addColorStop(1, color+'00');
+  g.fillStyle = grad; g.fillRect(0,0,128,128);
+  const tex = new THREE.CanvasTexture(cv);
+  const sp = new THREE.Sprite(new THREE.SpriteMaterial({map:tex, transparent:true, depthWrite:false, blending:THREE.AdditiveBlending}));
+  sp.scale.set(s, s, 1);
+  return sp;
+}
+/* 品牌 logo 徽章(圆形 + 品牌色环 + 简称) */
+function brandLogo(text, color, size=16){
+  const cv = document.createElement('canvas'); cv.width=cv.height=64;
+  const g = cv.getContext('2d');
+  g.beginPath(); g.arc(32,32,30,0,Math.PI*2);
+  g.fillStyle = '#0a1219'; g.fill();
+  g.lineWidth = 3; g.strokeStyle = color; g.stroke();
+  g.font = 'bold '+size+'px "PingFang SC","Microsoft YaHei",sans-serif';
+  g.textAlign='center'; g.textBaseline='middle';
+  g.fillStyle = color;
+  g.fillText(text, 32, 33);
+  const tex = new THREE.CanvasTexture(cv); tex.minFilter = THREE.LinearFilter;
+  const sp = new THREE.Sprite(new THREE.SpriteMaterial({map:tex, transparent:true, depthWrite:false}));
+  sp.scale.set(0.6, 0.6, 1);
+  return sp;
+}
+/* 品牌简称(用于 logo 徽章) */
+function shortBrand(b){
+  const m = {'一汽-大众':'大众','东风本田':'本田','广汽本田':'本田','华为问界':'问界','捷豹路虎':'路虎','雷克萨斯':'雷克','凯迪拉克':'凯迪','沃尔沃':'沃沃','保时捷':'保时'};
+  if(m[b]) return m[b];
+  if(b==='特斯拉') return 'T';
+  if(b==='比亚迪') return 'BYD';
+  return b.length>2 ? b.slice(0,2) : b;
+}
+/* 程序化玻璃幕墙纹理(发光窗户) */
+function windowTexture(glow, cols, rows, litRatio){
+  litRatio = (litRatio!=null) ? litRatio : 0.55;
+  const cv = document.createElement('canvas'); cv.width=128; cv.height=256;
+  const g = cv.getContext('2d');
+  g.fillStyle = '#081018'; g.fillRect(0,0,128,256);
+  const w = 128/cols, h = 256/rows;
+  for(let r=0;r<rows;r++) for(let c=0;c<cols;c++){
+    const rnd = Math.random();
+    if(rnd < litRatio){ g.fillStyle = glow; g.fillRect(c*w+2, r*h+3, w-4, h-6); }
+    else if(rnd < litRatio + 0.3){ g.fillStyle = '#1b3644'; g.fillRect(c*w+2, r*h+3, w-4, h-6); }
+    else { g.fillStyle = '#0b1c26'; g.fillRect(c*w+2, r*h+3, w-4, h-6); }
+  }
+  const tex = new THREE.CanvasTexture(cv); tex.minFilter = THREE.LinearFilter;
+  return tex;
+}
+/* 地面辉光纹理(区县底部光晕) */
+function groundGlowTexture(color){
+  const cv = document.createElement('canvas'); cv.width=cv.height=256;
+  const g = cv.getContext('2d');
+  const grad = g.createRadialGradient(128,128,0,128,128,128);
+  grad.addColorStop(0, color+'66'); grad.addColorStop(0.55, color+'1f'); grad.addColorStop(1, color+'00');
+  g.fillStyle = grad; g.fillRect(0,0,256,256);
+  return new THREE.CanvasTexture(cv);
+}
+
+/* ================================================================
+ * 页面1:集团总览(2.5D 等距城市)
+ * ================================================================ */
+const scenes = {};
+function initOverview(){
+  // 画像
+  $('#profile-grid').innerHTML = GROUP.map(g =>
+    `<div style="padding:7px 8px;background:rgba(255,255,255,0.02);border-radius:6px">
+       <div style="font-size:10px;color:var(--txt3)">${esc(g.k)}</div>
+       <div class="mono" style="font-size:14px;color:var(--txt)">${esc(g.v)}</div>
+       <div style="font-size:9px;color:var(--txt3)">${esc(g.sub)}</div>
+     </div>`).join('');
+  // 品牌
+  $('#brand-list').innerHTML = BRANDS.map(b =>
+    `<div class="brand-item"><span class="kg-dot" style="background:${b.c}"></span>
+     <span class="bname">${esc(b.n)}</span><span class="bcnt">${esc(b.cnt)}</span></div>`).join('');
+  // 决策日志(实时滚动)
+  startLogStream();
+  // KPI
+  $('#kpi-grid').innerHTML = KPIS.map(k =>
+    `<div class="glass kpi-card">
+       <div class="kpi-label">${esc(k.label)}</div>
+       <div class="kpi-val ${k.dir}">${k.dir==='down'?'-':''}${k.val}${k.unit}</div>
+       <div class="kpi-trend">${esc(k.trend)} · ${esc(k.target)}</div>
+     </div>`).join('');
+  // 雷达
+  const radar = echarts.init($('#radar-chart'));
+  charts.push(radar);
+  radar.setOption({
+    tooltip:tipStyle,
+    radar:{ indicator: RADAR.map(r=>({name:r.name, max:100})),
+      radius:'62%', center:['50%','52%'], splitNumber:4,
+      axisName:{color:C.txt, fontSize:10}, splitLine:{lineStyle:{color:C.split}},
+      splitArea:{areaStyle:{color:['rgba(94,234,212,0.02)','rgba(94,234,212,0.05)']}},
+      axisLine:{lineStyle:{color:C.split}} },
+    series:[{
+      type:'radar',
+      data:[
+        {value:RADAR.map(r=>r.val), name:'现状', areaStyle:{color:'rgba(94,234,212,0.25)'}, lineStyle:{color:'#5eead4'}, itemStyle:{color:'#5eead4'}},
+        {value:RADAR.map(r=>r.target), name:'目标', areaStyle:{color:'rgba(56,189,248,0.08)'}, lineStyle:{color:'#38bdf8', type:'dashed'}, itemStyle:{color:'#38bdf8'}}
+      ]
+    }]
+  });
+  // 维度 tab + 门店下拉 + 门店列表 + 详情
+  renderCityDims();
+  renderStoreSelect();
+  renderStoreList();
+  renderStoreDetail(curStore);
+  // 3D 场景(懒加载)
+  initCity3D();
+}
+function renderCityDims(){
+  $('#city-dims').innerHTML = DIMS.map(d =>
+    `<div class="dim-tab ${d.key===curDim?'active':''}" data-dim="${d.key}">${d.name}</div>`).join('');
+  $$('#city-dims .dim-tab').forEach(t => t.onclick = function(){
+    curDim = this.dataset.dim;
+    renderCityDims();
+    if(scenes.overview) scenes.overview.updateDim(curDim);
+    renderStoreDetail(curStore);
+    renderStoreList();
+  });
+}
+function renderStoreSelect(){
+  $('#store-select').innerHTML = STORES.map(s =>
+    `<option value="${s.id}" ${s.id===curStore?'selected':''}>${s.name} · ${s.brand}</option>`).join('');
+  $('#store-select').onchange = function(){ curStore = this.value; renderStoreDetail(curStore); renderStoreList(); if(scenes.overview){ scenes.overview.highlight(curStore); scenes.overview.focus(curStore); } };
+}
+function renderStoreList(){
+  const dim = DIMS.find(d=>d.key===curDim);
+  $('#store-list').innerHTML = STORES.map(s => {
+    const active = s.id===curStore;
+    const dval = s[curDim];
+    return `<div class="store-item" data-id="${s.id}"
+      style="display:flex;align-items:center;gap:8px;padding:6px 8px;border-radius:6px;cursor:pointer;border-left:2px solid ${active?'var(--cyan)':'transparent'};background:${active?'rgba(94,234,212,0.12)':'rgba(255,255,255,0.02)'}">
+      <span class="kg-dot" style="background:${BRAND_COLORS[s.brand]||'#64748b'}"></span>
+      <span style="flex:1;font-size:12px;color:var(--txt)">${esc(s.name)}</span>
+      <span style="font-size:9px;color:var(--txt3)">${esc(s.brand)}</span>
+      <span class="mono" style="font-size:11px;color:${dim.color}">${dim.signed?sign(dval):fmt(dval)}<span style="font-size:9px;color:var(--txt3)">${dim.unit}</span></span>
+    </div>`;
+  }).join('');
+  document.querySelectorAll('#store-list .store-item').forEach(el=>{
+    el.onclick = function(){
+      curStore = this.dataset.id;
+      renderStoreList(); renderStoreDetail(curStore); renderStoreSelect();
+      if(scenes.overview){ scenes.overview.highlight(curStore); scenes.overview.focus(curStore); }
+    };
+  });
+}
+function renderStoreDetail(id){
+  const s = STORES.find(x=>x.id===id); if(!s) return;
+  const dim = DIMS.find(d=>d.key===curDim);
+  const dval = s[curDim];
+  const items = [
+    ['品牌', s.brand], ['区域', s.region + '·' + s.city], ['员工', (s.staff||0)+' 人'],
+    ['年销量', fmt(s.sales)+' 台'], ['库存资金占用', s.inv+' 百万元'],
+    ['年经营利润', sign(s.profit)+' 百万元'], ['保有客户', s.cust+' 千人'],
+    ['状态', s.out ? (s.brand==='恒驰'?'已退出':'待确认') : '正常经营']
+  ];
+  $('#store-detail').innerHTML =
+    `<div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">
+       <span class="kg-dot" style="background:${BRAND_COLORS[s.brand]||'#64748b'}"></span>
+       <b style="font-size:14px;color:var(--txt)">${esc(s.name)}</b>
+       ${s.star?'<span class="tag" style="color:var(--warn)">销冠</span>':''}
+     </div>
+     <div style="font-size:10px;color:var(--txt3);margin-bottom:8px">${esc(s.note)}</div>
+     <div class="glass" style="padding:8px 10px;margin-bottom:8px">
+       <div style="font-size:10px;color:var(--txt3)">${esc(dim.name)}指标 · 光柱高度</div>
+       <div class="mono" style="font-size:20px;color:${dim.color}">${dim.signed?sign(dval):fmt(dval)} <span style="font-size:11px;color:var(--txt3)">${dim.unit}</span></div>
+     </div>
+     ${items.map(i=>`<div class="detail-item"><span class="k">${esc(i[0])}</span><span class="v">${esc(i[1])}</span></div>`).join('')}`;
+}
+
+/* ---- 2.5D 城市 3D ---- */
+async function initCity3D(){
+  const host = document.getElementById('city3d');
+  if(!host || scenes.overview) return;
+  if(typeof THREE === 'undefined'){
+    host.innerHTML = '<div style="display:flex;height:100%;align-items:center;justify-content:center;color:var(--txt3)">Three.js 未加载(需联网)</div>';
+    return;
+  }
+  // 加载江苏 GeoJSON(13 市) + 计算 bbox + 投影
+  let jiangsuGeo = null;
+  try{
+    const r = await fetch('https://geo.datav.aliyun.com/areas_v3/bound/320000_full.json');
+    jiangsuGeo = await r.json();
+  }catch(e){ console.warn('江苏 geo 加载失败:', e.message); }
+  // 加载苏州区级 GeoJSON(9 区县)
+  let suzhouGeo = null;
+  try{
+    const r2 = await fetch('https://geo.datav.aliyun.com/areas_v3/bound/320500_full.json');
+    suzhouGeo = await r2.json();
+  }catch(e){ console.warn('苏州区级 geo 加载失败:', e.message); }
+  let proj = null, JS_SCALE = 40, JS_CX = 120.62, JS_CZ = 31.30;
+  // 门店/地标/竞品专用投影(与地图同比例,门店不再放大)
+  const projStore = (lng,lat)=>[(lng-120.62)*40, (31.30-lat)*40];
+  if(suzhouGeo && suzhouGeo.features){
+    // 投影中心 = 苏州(聚焦苏州区域,放大让苏州市更大)
+    JS_SCALE = 40; JS_CX = 120.62; JS_CZ = 31.30;
+    proj = (lng,lat)=>[(lng-JS_CX)*JS_SCALE, (JS_CZ-lat)*JS_SCALE];
+  }
+  const w = host.clientWidth || 600, h = host.clientHeight || 400;
+  const renderer = new THREE.WebGLRenderer({antialias:true, alpha:true});
+  renderer.setSize(w, h); renderer.setPixelRatio(Math.min(devicePixelRatio,2));
+  renderer.setClearColor(0x000000, 0);
+  host.appendChild(renderer.domElement);
+
+  const scene = new THREE.Scene();
+  scene.fog = new THREE.FogExp2(0x02070d, 0.02);
+  const camera = new THREE.OrthographicCamera(-16*w/h, 16*w/h, 16, -16, 0.1, 200);
+  camera.position.set(0, 13, 16); camera.lookAt(0,0,0);
+
+  // Bloom 后处理(让辉光变成光晕,建议3)
+  let composer = null;
+  if(THREE.EffectComposer && THREE.UnrealBloomPass){
+    try{
+      composer = new THREE.EffectComposer(renderer);
+      composer.addPass(new THREE.RenderPass(scene, camera));
+      const bloom = new THREE.UnrealBloomPass(new THREE.Vector2(w, h), 0.7, 0.4, 0.85);
+      composer.addPass(bloom);
+    }catch(e){ console.warn('Bloom init fail:', e.message); composer = null; }
+  }
+
+  const world = new THREE.Group(); scene.add(world);
+  scene.add(new THREE.AmbientLight(0x445566, 1.3));
+  const dir = new THREE.DirectionalLight(0x5eead4, 0.7); dir.position.set(6,12,8); scene.add(dir);
+  const rim = new THREE.DirectionalLight(0x38bdf8, 0.5); rim.position.set(-8,6,-6); scene.add(rim);
+
+  // 地面 + 网格 + 扫描线
+  const floor = new THREE.Mesh(new THREE.PlaneGeometry(40,40),
+    new THREE.MeshBasicMaterial({color:0x02070d}));
+  floor.rotation.x = -Math.PI/2; floor.position.y = -0.1; world.add(floor);
+  const grid = new THREE.GridHelper(40, 40, 0x2a4a55, 0x0f2229);
+  grid.position.y = -0.06; world.add(grid);
+  const scanLine = new THREE.Mesh(new THREE.PlaneGeometry(40, 0.35),
+    new THREE.MeshBasicMaterial({color:0x22d3a3, transparent:true, opacity:0.28, blending:THREE.AdditiveBlending, depthWrite:false}));
+  scanLine.rotation.x = -Math.PI/2; scanLine.position.y = 0.03; world.add(scanLine);
+
+  // 江苏 13 市 extrude 立体地图(真实地图形状)
+  function ringArea(r){ let a=0; for(let i=0;i<r.length;i++){ const p1=r[i], p2=r[(i+1)%r.length]; a += p1[0]*p2[1]-p2[0]*p1[1]; } return Math.abs(a/2); }
+  const REGION_COLOR = {
+    '苏州市':'#22d3a3','无锡市':'#3b82f6','连云港市':'#8b5cf6',
+    '南京市':'#f5b94a','常州市':'#38bdf8','南通市':'#a78bfa',
+    '徐州市':'#0ea5a5','淮安市':'#0ea5a5','盐城市':'#0ea5a5',
+    '扬州市':'#0ea5a5','镇江市':'#0ea5a5','泰州市':'#0ea5a5','宿迁市':'#0ea5a5'
+  };
+  if(false && jiangsuGeo && jiangsuGeo.features && proj){
+    jiangsuGeo.features.forEach(f=>{
+      try{
+        const name = f.properties.name;
+        if(name === '苏州市') return; // 苏州市改用区级细分(下方 suzhouGeo)
+        const cityC = REGION_COLOR[name] || '#0ea5a5';
+        const g = f.geometry;
+        const polys = g.type==='Polygon'?[g.coordinates]:(g.type==='MultiPolygon'?g.coordinates:[]);
+        polys.forEach(poly=>{
+          let outer=poly[0], maxA=-1;
+          poly.forEach(r=>{const a=ringArea(r);if(a>maxA){maxA=a;outer=r;}});
+          if(!outer||outer.length<4) return;
+          const shape = new THREE.Shape();
+          outer.forEach((c,i)=>{const [x,z]=proj(c[0],c[1]); if(i===0)shape.moveTo(x,z); else shape.lineTo(x,z);});
+          const geo = new THREE.ExtrudeGeometry(shape, {depth:0.3, bevelEnabled:false});
+          const mesh = new THREE.Mesh(geo, new THREE.MeshStandardMaterial({color:0x0c1a22, roughness:0.6, metalness:0.3, emissive:new THREE.Color(cityC), emissiveIntensity:0.14, transparent:true, opacity:0.92}));
+          mesh.rotation.x = -Math.PI/2;
+          mesh.userData = {name, kind:'region'};
+          world.add(mesh);
+          const ed = new THREE.Line(
+            new THREE.BufferGeometry().setFromPoints(shape.getPoints(80).map(p=>new THREE.Vector3(p.x, p.y, 0.3))),
+            new THREE.LineBasicMaterial({color:new THREE.Color(cityC), transparent:true, opacity:0.6}));
+          mesh.add(ed);
+          // 市名标签
+          const center = f.properties.center || f.properties.centroid || [JS_CX, JS_CZ];
+          const [cx,cz] = proj(center[0], center[1]);
+          const label = textSprite(name.replace('市',''), cityC, 26);
+          label.position.set(cx, 0.4, cz); world.add(label);
+        });
+      }catch(e){}
+    });
+  }
+
+  // 苏州 9 区县 extrude(细分苏州市)
+  const SUZHOU_COLOR = {
+    '虎丘区':'#22d3a3','姑苏区':'#f5b94a','吴中区':'#38bdf8','相城区':'#a78bfa','吴江区':'#5eead4',
+    '常熟市':'#0ea5a5','张家港市':'#0ea5a5','昆山市':'#0ea5a5','太仓市':'#0ea5a5'
+  };
+  // 区深度差异化(重点区凸起,建议6):按门店数量
+  const DISTRICT_DEPTH = {
+    '姑苏区':0.55, '吴中区':0.42, '虎丘区':0.42, '相城区':0.40, '吴江区':0.40,
+    '常熟市':0.24, '张家港市':0.24, '昆山市':0.24, '太仓市':0.24
+  };
+  if(suzhouGeo && suzhouGeo.features && proj){
+    suzhouGeo.features.forEach(f=>{
+      try{
+        const name = f.properties.name;
+        const cityC = SUZHOU_COLOR[name] || '#0ea5a5';
+        const g = f.geometry;
+        const polys = g.type==='Polygon'?[g.coordinates]:(g.type==='MultiPolygon'?g.coordinates:[]);
+        polys.forEach(poly=>{
+          let outer=poly[0], maxA=-1;
+          poly.forEach(r=>{const a=ringArea(r);if(a>maxA){maxA=a;outer=r;}});
+          if(!outer||outer.length<4) return;
+          const shape = new THREE.Shape();
+          outer.forEach((c,i)=>{const [x,z]=proj(c[0],c[1]); if(i===0)shape.moveTo(x,z); else shape.lineTo(x,z);});
+          const depth = DISTRICT_DEPTH[name] || 0.3;
+          const geo = new THREE.ExtrudeGeometry(shape, {depth:depth, bevelEnabled:false});
+          const mesh = new THREE.Mesh(geo, new THREE.MeshStandardMaterial({color:0x0c1a22, roughness:0.5, metalness:0.35, emissive:new THREE.Color(cityC), emissiveIntensity:0.32, transparent:true, opacity:0.92}));
+          mesh.rotation.x = -Math.PI/2;
+          mesh.userData = {name, kind:'district'};
+          world.add(mesh);
+          // 边缘勾勒(清晰区分区域)
+          const ed = new THREE.Line(
+            new THREE.BufferGeometry().setFromPoints(shape.getPoints(80).map(p=>new THREE.Vector3(p.x, p.y, depth))),
+            new THREE.LineBasicMaterial({color:new THREE.Color(cityC), transparent:true, opacity:0.9}));
+          mesh.add(ed);
+          // 顶面发光轮廓环(增强层次,内缩一圈)
+          const pts = shape.getPoints(80);
+          const ringGeom = new THREE.BufferGeometry().setFromPoints(pts.map(p=>new THREE.Vector3(p.x, p.y, depth+0.02)));
+          const ringLine = new THREE.Line(ringGeom, new THREE.LineBasicMaterial({color:0x5eead4, transparent:true, opacity:0.5, blending:THREE.AdditiveBlending}));
+          mesh.add(ringLine);
+          // 边缘粗 Tube 线(更明显的边界,沿轮廓的粗管)
+          const tubePts = pts.map(p=>new THREE.Vector3(p.x, p.y, depth));
+          const tubeCurve = new THREE.CatmullRomCurve3(tubePts.concat([tubePts[0].clone()]), true);
+          const tube = new THREE.Mesh(new THREE.TubeGeometry(tubeCurve, 120, 0.02, 8),
+            new THREE.MeshBasicMaterial({color:new THREE.Color(cityC), transparent:true, opacity:0.95}));
+          mesh.add(tube);
+          const center = f.properties.center || f.properties.centroid || [JS_CX, JS_CZ];
+          const [cx,cz] = proj(center[0], center[1]);
+          const label = textSprite(name, cityC, 18);
+          label.position.set(cx, 0.4, cz); world.add(label);
+          // 区顶面街区网格(街区道路,表示城市肌理)
+          const gridSize = 2.2, gy = depth + 0.05;
+          const gx0 = cx - gridSize/2, gz0 = cz - gridSize/2;
+          const gpts = [];
+          for(let i=0;i<=4;i++){
+            const off = gridSize/4*i;
+            gpts.push(gx0+off, gy, gz0, gx0+off, gy, gz0+gridSize);
+            gpts.push(gx0, gy, gz0+off, gx0+gridSize, gy, gz0+off);
+          }
+          const gridGeom = new THREE.BufferGeometry();
+          gridGeom.setAttribute('position', new THREE.Float32BufferAttribute(gpts, 3));
+          const gridLine = new THREE.LineSegments(gridGeom, new THREE.LineBasicMaterial({color:new THREE.Color(cityC), transparent:true, opacity:0.3}));
+          world.add(gridLine);
+        });
+      }catch(e){}
+    });
+  }
+
+  // 门店所在城市的地面区域辉光(突出有门店的城市)
+  if(projStore){
+    const STORE_CITIES = [
+      {name:'苏州', lng:120.62, lat:31.30, c:'#22d3a3'},
+      {name:'无锡旭田', lng:121.00, lat:31.50, c:'#3b82f6'},
+      {name:'连云港领赛', lng:120.55, lat:31.85, c:'#8b5cf6'}
+    ];
+    STORE_CITIES.forEach(sc=>{
+      try{
+        const [cx,cz] = projStore(sc.lng, sc.lat);
+        const glow = new THREE.Mesh(new THREE.PlaneGeometry(3.5, 3.5),
+          new THREE.MeshBasicMaterial({map:groundGlowTexture(sc.c), transparent:true, blending:THREE.AdditiveBlending, depthWrite:false}));
+        glow.rotation.x = -Math.PI/2; glow.position.set(cx, 0.06, cz);
+        world.add(glow);
+      }catch(e){}
+    });
+  }
+
+  // 门店:低多边形建筑(裙楼 + 玻璃幕墙塔楼 + 楼顶信标 + 光柱)
+  const storeGroups = {};
+  const PODIUM_TOP = 0.28;
+  STORES.forEach(s => {
+    const grp = new THREE.Group();
+    const brandC = BRAND_COLORS[s.brand] || '#64748b';
+    const dimC = new THREE.Color('#5eead4');
+    const wtex = windowTexture(brandC, 6, 14);
+    // 裙楼(固定)
+    const podium = new THREE.Mesh(new THREE.BoxGeometry(0.7, 0.24, 0.7),
+      new THREE.MeshStandardMaterial({color:0x0e1a22, roughness:0.6, metalness:0.35}));
+    podium.position.y = 0.13;
+    const pEd = new THREE.LineSegments(new THREE.EdgesGeometry(podium.geometry),
+      new THREE.LineBasicMaterial({color:new THREE.Color(brandC), transparent:true, opacity:0.5}));
+    pEd.position.copy(podium.position);
+    grp.add(podium); grp.add(pEd);
+    // 玻璃幕墙塔楼(高度=指标)
+    const tower = new THREE.Mesh(new THREE.BoxGeometry(0.45, 1, 0.45),
+      new THREE.MeshStandardMaterial({color:0xffffff, map:wtex, emissive:0xffffff, emissiveMap:wtex, emissiveIntensity:0.85, roughness:0.4, metalness:0.4}));
+    grp.add(tower);
+    const tEd = new THREE.LineSegments(new THREE.EdgesGeometry(tower.geometry),
+      new THREE.LineBasicMaterial({color:dimC, transparent:true, opacity:0.65}));
+    grp.add(tEd);
+    // 楼顶设备 + 信标
+    const roof = new THREE.Mesh(new THREE.BoxGeometry(0.34, 0.12, 0.34),
+      new THREE.MeshStandardMaterial({color:new THREE.Color(brandC), emissive:new THREE.Color(brandC), emissiveIntensity:0.6, roughness:0.3}));
+    grp.add(roof);
+    const tip = new THREE.Mesh(new THREE.SphereGeometry(0.09, 14, 14),
+      new THREE.MeshBasicMaterial({color:dimC}));
+    grp.add(tip);
+    // 品牌辉光 + 光柱
+    const glow = glowSprite(brandC, 2.0); grp.add(glow);
+    const beam = new THREE.Mesh(new THREE.CylinderGeometry(0.1, 0.04, 1, 12, 1, true),
+      new THREE.MeshBasicMaterial({color:dimC, transparent:true, opacity:0.16, blending:THREE.AdditiveBlending, depthWrite:false, side:THREE.DoubleSide}));
+    grp.add(beam);
+    // 门牌 + 品牌logo发光牌 + 选中扫描环
+    const label = textSprite(s.name, '#e6e9f2', 24); grp.add(label);
+    const brandPlate = brandLogo(shortBrand(s.brand), brandC, 15); brandPlate.position.y = -0.75; grp.add(brandPlate);
+    const scanRing = new THREE.Mesh(new THREE.TorusGeometry(0.66, 0.025, 8, 48),
+      new THREE.MeshBasicMaterial({color:new THREE.Color(brandC), transparent:true, opacity:0.9, blending:THREE.AdditiveBlending}));
+    scanRing.rotation.x = Math.PI/2; scanRing.visible = false; grp.add(scanRing);
+    if(s.out){
+      tower.material = new THREE.MeshStandardMaterial({color:0x22303a, roughness:0.9});
+      roof.material = new THREE.MeshStandardMaterial({color:0x2a363f, roughness:0.9});
+      tEd.visible = false; tip.visible = false; beam.visible = false; glow.visible = false;
+    }
+    const [px,pz] = projStore(s.lng, s.lat);
+    grp.position.set(px, 0, pz);
+    grp.scale.setScalar(0.6); // 门店整体缩小(相对区划),但保留建模细节
+    grp.userData = {storeId:s.id};
+    world.add(grp);
+    storeGroups[s.id] = {grp, tower, tEd, roof, tip, glow, beam, label, scanRing, brandC};
+  });
+
+  // 地标建模(旅游景点)
+  if(proj){
+    const GOLD = '#e6c15a';
+    LANDMARKS.forEach(lm=>{
+      try{
+        const [lx,lz] = projStore(lm.lng, lm.lat);
+        const g = new THREE.Group(); g.position.set(lx, 0, lz);
+        if(lm.type==='tower'){ // 虎丘塔:多层塔身 + 金色尖顶
+          for(let i=0;i<3;i++){
+            const seg = new THREE.Mesh(new THREE.CylinderGeometry(0.22-i*0.05, 0.26-i*0.05, 0.4, 12),
+              new THREE.MeshStandardMaterial({color:0x8a5a2a, roughness:0.7}));
+            seg.position.y = 0.2 + i*0.4; g.add(seg);
+          }
+          const spire = new THREE.Mesh(new THREE.ConeGeometry(0.12, 0.5, 12),
+            new THREE.MeshStandardMaterial({color:new THREE.Color(GOLD), emissive:new THREE.Color(GOLD), emissiveIntensity:0.4}));
+          spire.position.y = 1.4; g.add(spire);
+        }else if(lm.type==='temple'){ // 寺庙:主体 + 双层金顶 + 尖顶
+          const body = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.5, 0.5),
+            new THREE.MeshStandardMaterial({color:0x6b4a2a, roughness:0.7}));
+          body.position.y = 0.25; g.add(body);
+          for(let i=0;i<2;i++){
+            const roof = new THREE.Mesh(new THREE.BoxGeometry(0.7, 0.08, 0.7),
+              new THREE.MeshStandardMaterial({color:new THREE.Color(GOLD), emissive:new THREE.Color(GOLD), emissiveIntensity:0.3}));
+            roof.position.y = 0.5 + i*0.3; g.add(roof);
+          }
+          const top = new THREE.Mesh(new THREE.ConeGeometry(0.15, 0.3, 8),
+            new THREE.MeshStandardMaterial({color:new THREE.Color(GOLD), emissive:new THREE.Color(GOLD), emissiveIntensity:0.4}));
+          top.position.y = 1.1; g.add(top);
+        }else if(lm.type==='garden'){ // 园林亭:4柱 + 金顶
+          for(let i=0;i<4;i++){
+            const col = new THREE.Mesh(new THREE.CylinderGeometry(0.03, 0.03, 0.4, 8),
+              new THREE.MeshBasicMaterial({color:0x8a5a2a}));
+            col.position.set(Math.cos(i*Math.PI/2)*0.2, 0.2, Math.sin(i*Math.PI/2)*0.2); g.add(col);
+          }
+          const roof = new THREE.Mesh(new THREE.ConeGeometry(0.25, 0.3, 8),
+            new THREE.MeshStandardMaterial({color:new THREE.Color(GOLD), emissive:new THREE.Color(GOLD), emissiveIntensity:0.4}));
+          roof.position.y = 0.55; g.add(roof);
+        }else if(lm.type==='lake'){ // 太湖:半透明水面
+          const lake = new THREE.Mesh(new THREE.PlaneGeometry(2.2, 1.4),
+            new THREE.MeshBasicMaterial({color:0x38bdf8, transparent:true, opacity:0.35, depthWrite:false}));
+          lake.rotation.x = -Math.PI/2; lake.position.y = 0.02; g.add(lake);
+        }else if(lm.type==='mountain'){ // 花果山:绿锥
+          const m = new THREE.Mesh(new THREE.ConeGeometry(0.6, 1.2, 12),
+            new THREE.MeshStandardMaterial({color:0x1f6b4a, roughness:0.8}));
+          m.position.y = 0.6; g.add(m);
+        }
+        const label = textSprite(lm.name, GOLD, 22); label.position.y = 1.7; g.add(label);
+        world.add(g);
+      }catch(e){}
+    });
+
+    // 竞品 4S 店(品牌色精品建筑:底座+发光主体+顶盖+logo牌)
+    COMPETITORS.forEach(cp=>{
+      try{
+        const [cx,cz] = projStore(cp.lng, cp.lat);
+        const g = new THREE.Group(); g.position.set(cx, 0, cz);
+        const cc = cp.c || '#8b95a8';
+        // 底座
+        const base = new THREE.Mesh(new THREE.BoxGeometry(0.34, 0.1, 0.34),
+          new THREE.MeshStandardMaterial({color:0x2a323c, roughness:0.7}));
+        base.position.y = 0.05; g.add(base);
+        // 主体(品牌色微发光)
+        const body = new THREE.Mesh(new THREE.BoxGeometry(0.28, 0.3, 0.28),
+          new THREE.MeshStandardMaterial({color:new THREE.Color(cc), roughness:0.6, emissive:new THREE.Color(cc), emissiveIntensity:0.22}));
+        body.position.y = 0.25; g.add(body);
+        const ed = new THREE.LineSegments(new THREE.EdgesGeometry(body.geometry),
+          new THREE.LineBasicMaterial({color:new THREE.Color(cc), transparent:true, opacity:0.7}));
+        ed.position.copy(body.position); g.add(ed);
+        // 顶盖(新能源=青,豪华=金,普通=品牌色)
+        const topColor = cp.newEnergy ? '#00c1d4' : (cp.luxury ? '#f5b94a' : cc);
+        const top = new THREE.Mesh(new THREE.BoxGeometry(0.34, 0.06, 0.34),
+          new THREE.MeshStandardMaterial({color:new THREE.Color(topColor), emissive:new THREE.Color(topColor), emissiveIntensity:0.55}));
+        top.position.y = 0.43; g.add(top);
+        // 品牌 logo 牌 + 名字
+        const brandPlate = brandLogo(shortBrand(cp.brand), cc, 12); brandPlate.position.y = 0.7; g.add(brandPlate);
+        const label = textSprite(cp.name, '#c8cfd8', 14); label.position.y = 0.95; g.add(label);
+        world.add(g);
+      }catch(e){}
+    });
+  }
+
+  // 苏州水网(金鸡湖/独墅湖/阳澄湖,水城特色)
+  const LAKES = [
+    {name:'金鸡湖', lng:120.70, lat:31.32, r:0.9},
+    {name:'独墅湖', lng:120.76, lat:31.27, r:0.6},
+    {name:'阳澄湖', lng:120.82, lat:31.45, r:0.8}
+  ];
+  LAKES.forEach(lk=>{
+    try{
+      const [cx,cz] = projStore(lk.lng, lk.lat);
+      const lake = new THREE.Mesh(new THREE.CircleGeometry(lk.r, 36),
+        new THREE.MeshBasicMaterial({color:0x164b6e, transparent:true, opacity:0.55, depthWrite:false}));
+      lake.rotation.x = -Math.PI/2; lake.position.set(cx, 0.04, cz); world.add(lake);
+      const ring = new THREE.Mesh(new THREE.RingGeometry(lk.r-0.06, lk.r, 48),
+        new THREE.MeshBasicMaterial({color:0x38bdf8, transparent:true, opacity:0.5, depthWrite:false, blending:THREE.AdditiveBlending}));
+      ring.rotation.x = -Math.PI/2; ring.position.set(cx, 0.05, cz); world.add(ring);
+      const label = textSprite(lk.name, '#38bdf8', 15); label.position.set(cx, 0.2, cz); world.add(label);
+    }catch(e){}
+  });
+
+  // 苏州总部 → 无锡/连云港 弧形数据流动线(脉冲)
+  const flows = [];
+  const hqPos = projStore(120.62, 31.30);
+  const hq = new THREE.Vector3(hqPos[0], 0.3, hqPos[1]);
+  const FLOW_CITIES = [[121.00,31.50,'#3b82f6'],[120.55,31.85,'#8b5cf6'],[120.80,31.70,'#f5b94a']];
+  FLOW_CITIES.forEach(([lng,lat,c])=>{
+    const p = projStore(lng,lat);
+    const to = new THREE.Vector3(p[0], 0.3, p[1]);
+    const mid = new THREE.Vector3((hq.x+to.x)/2, 1.5, (hq.z+to.z)/2);
+    const curve = new THREE.QuadraticBezierCurve3(hq.clone(), mid, to);
+    const geom = new THREE.BufferGeometry().setFromPoints(curve.getPoints(30));
+    const line = new THREE.Line(geom, new THREE.LineBasicMaterial({color:new THREE.Color(c), transparent:true, opacity:0.35, blending:THREE.AdditiveBlending, depthWrite:false}));
+    world.add(line);
+    const dot = new THREE.Mesh(new THREE.SphereGeometry(0.07, 10, 10),
+      new THREE.MeshBasicMaterial({color:new THREE.Color(c), transparent:true, opacity:0.9, blending:THREE.AdditiveBlending}));
+    world.add(dot);
+    flows.push({line, dot, curve, t:Math.random(), sp:0.5+Math.random()*0.5});
+  });
+
+  // 苏州主干道光轨(流动车流)
+  const roadFlows = [];
+  const ROADS = [
+    [[120.57,31.31],[120.68,31.31]],  // 干将路(东西)
+    [[120.62,31.26],[120.62,31.38]],  // 人民路(南北)
+    [[120.66,31.30],[120.76,31.32]]   // 金鸡湖大道(东)
+  ];
+  ROADS.forEach(([a,b])=>{
+    const pa = projStore(a[0],a[1]), pb = projStore(b[0],b[1]);
+    const geom = new THREE.BufferGeometry().setFromPoints([
+      new THREE.Vector3(pa[0],0.05,pa[1]), new THREE.Vector3(pb[0],0.05,pb[1])]);
+    const line = new THREE.Line(geom, new THREE.LineBasicMaterial({color:0x2a4a55, transparent:true, opacity:0.5}));
+    world.add(line);
+    for(let i=0;i<2;i++){
+      const dot = new THREE.Mesh(new THREE.SphereGeometry(0.05,8,8),
+        new THREE.MeshBasicMaterial({color:0x5eead4, transparent:true, opacity:0.9, blending:THREE.AdditiveBlending}));
+      world.add(dot);
+      roadFlows.push({dot, a:new THREE.Vector3(pa[0],0.06,pa[1]), b:new THREE.Vector3(pb[0],0.06,pb[1]), t:Math.random(), sp:0.6+Math.random()*0.6});
+    }
+  });
+
+  // 门店之间链路(宝隆总部 → 其他门店,体现集团网络)
+  const storeLinks = [];
+  const hqStore = STORES.find(s=>s.star) || STORES[1];
+  const hqP = projStore(hqStore.lng, hqStore.lat);
+  STORES.filter(s=>!s.star && !s.out).forEach(s=>{
+    try{
+      const sp = projStore(s.lng, s.lat);
+      const curve = new THREE.QuadraticBezierCurve3(
+        new THREE.Vector3(hqP[0], 0.35, hqP[1]),
+        new THREE.Vector3((hqP[0]+sp[0])/2, 1.0, (hqP[1]+sp[1])/2),
+        new THREE.Vector3(sp[0], 0.35, sp[1]));
+      const geom = new THREE.BufferGeometry().setFromPoints(curve.getPoints(30));
+      const line = new THREE.Line(geom, new THREE.LineBasicMaterial({color:0x5eead4, transparent:true, opacity:0.28, blending:THREE.AdditiveBlending, depthWrite:false}));
+      world.add(line);
+      const dot = new THREE.Mesh(new THREE.SphereGeometry(0.05, 8, 8),
+        new THREE.MeshBasicMaterial({color:0x5eead4, transparent:true, opacity:0.9, blending:THREE.AdditiveBlending}));
+      world.add(dot);
+      storeLinks.push({dot, curve, t:Math.random(), sp:0.5+Math.random()*0.5});
+    }catch(e){}
+  });
+
+  // 粒子
+  const pCount = 160;
+  const pGeo = new THREE.BufferGeometry();
+  const pos = new Float32Array(pCount*3);
+  for(let i=0;i<pCount;i++){ pos[i*3]=(Math.random()-0.5)*26; pos[i*3+1]=Math.random()*6; pos[i*3+2]=(Math.random()-0.5)*26; }
+  pGeo.setAttribute('position', new THREE.BufferAttribute(pos,3));
+  const pMat = new THREE.PointsMaterial({color:0x5eead4, size:0.06, transparent:true, opacity:0.5, blending:THREE.AdditiveBlending, depthWrite:false});
+  const pts = new THREE.Points(pGeo, pMat); world.add(pts);
+
+  // 状态
+  let rotY = 0.4, targetRot = 0.4, auto = true, zoom = 2.5, dragging = false, px=0, py=0;
+  let highlighted = null;
+  let focusTarget = null; // 门店聚焦目标(局部坐标),null=看世界中心
+
+  function focusStore(id){
+    const sg = storeGroups[id];
+    if(!sg) return;
+    focusTarget = sg.grp.position.clone();
+    zoom = 5.0; auto = false;
+  }
+
+  function setHeights(){
+    const d = DIMS.find(x=>x.key===curDim);
+    STORES.forEach(s => {
+      const sg = storeGroups[s.id]; if(!sg) return;
+      const raw = s[curDim];
+      let ratio;
+      if(d.signed) ratio = Math.min(Math.abs(raw)/d.max, 1);
+      else ratio = Math.min(raw/d.max, 1);
+      const H = 0.8 + ratio*3.2;
+      const top = PODIUM_TOP + H;
+      sg.tower.scale.y = H; sg.tower.position.y = PODIUM_TOP + H/2;
+      sg.tEd.scale.y = H; sg.tEd.position.y = PODIUM_TOP + H/2;
+      sg.roof.position.y = top + 0.06;
+      sg.tip.position.y = top + 0.18;
+      sg.glow.position.y = PODIUM_TOP + H*0.5;
+      sg.beam.position.y = top + 1.2; sg.beam.scale.y = 2.4;
+      sg.label.position.y = top + 0.85;
+      if(!s.out){
+        const c = new THREE.Color(d.signed ? (raw<0?'#ff4d4d':'#22d3a3') : d.color);
+        sg.tEd.material.color.copy(c);
+        sg.tip.material.color.copy(c);
+        sg.beam.material.color.copy(c);
+        // 建议1:辉光强度映射指标值(指标越高辉光越亮)
+        sg.glow.material.opacity = 0.2 + 0.65*ratio;
+        // 建议2:窗户亮灯数映射指标值(指标越高亮灯越多)
+        const litRatio = 0.15 + 0.65*ratio;
+        const wtex = windowTexture(sg.brandC, 6, 14, litRatio);
+        sg.tower.material.map = wtex;
+        sg.tower.material.emissiveMap = wtex;
+        sg.tower.material.emissiveIntensity = 0.4 + 0.6*ratio;
+        sg.tower.material.needsUpdate = true;
+      }
+    });
+  }
+
+  function highlight(id){
+    highlighted = id;
+    STORES.forEach(s=>{
+      const sg = storeGroups[s.id]; if(!sg) return;
+      const on = s.id===id;
+      sg.grp.scale.setScalar(on?0.72:0.6);
+      if(sg.scanRing) sg.scanRing.visible = on;
+    });
+  }
+
+  // 交互
+  const ray = new THREE.Raycaster(); const mouse = new THREE.Vector2();
+  function onDown(e){ dragging=true; px=e.clientX; py=e.clientY; auto=false; host.style.cursor='grabbing'; }
+  function onMove(e){
+    if(dragging){
+      const dx = e.clientX-px, dy = e.clientY-py; px=e.clientX; py=e.clientY;
+      targetRot += dx*0.006; zoom = Math.min(6, Math.max(0.5, zoom - dy*0.004));
+    } else {
+      const r = host.getBoundingClientRect();
+      mouse.x = ((e.clientX-r.left)/r.width)*2-1; mouse.y = -((e.clientY-r.top)/r.height)*2+1;
+    }
+  }
+  function onUp(){ dragging=false; host.style.cursor='grab'; setTimeout(()=>{auto=true;}, 3000); }
+  function onWheel(e){ zoom = Math.min(6, Math.max(0.5, zoom + e.deltaY*0.001)); }
+  function onClick(e){
+    const r = host.getBoundingClientRect();
+    mouse.x = ((e.clientX-r.left)/r.width)*2-1; mouse.y = -((e.clientY-r.top)/r.height)*2+1;
+    ray.setFromCamera(mouse, camera);
+    const hitMeshes = [];
+    Object.values(storeGroups).forEach(sg=>{ hitMeshes.push(sg.tower, sg.roof); });
+    const hits = ray.intersectObjects(hitMeshes, false);
+    if(hits.length){
+      const storeId = hits[0].object.parent.userData.storeId;
+      curStore = storeId; renderStoreDetail(storeId); renderStoreSelect(); highlight(storeId); focusStore(storeId);
+    }
+  }
+  host.addEventListener('pointerdown', onDown);
+  window.addEventListener('pointermove', onMove);
+  window.addEventListener('pointerup', onUp);
+  host.addEventListener('wheel', onWheel, {passive:true});
+  host.addEventListener('click', onClick);
+
+  setHeights();
+  highlight(curStore);
+  scenes.overview = {
+    updateDim(d){ curDim=d; setHeights(); },
+    highlight,
+    focus(id){ focusStore(id); },
+    resetFocus(){ focusTarget = null; zoom = 2.5; auto = true; },
+    resize(){ const w2=host.clientWidth, h2=host.clientHeight; const asp=w2/h2; camera.left=-16*asp; camera.right=16*asp; camera.top=16; camera.bottom=-16; camera.updateProjectionMatrix(); renderer.setSize(w2,h2); },
+    animate(t){
+      if(auto) targetRot += 0.0012;
+      rotY += (targetRot-rotY)*0.08;
+      world.rotation.y = rotY;
+      const s = 1/zoom;
+      camera.left = -16*(w/h)*s; camera.right = 16*(w/h)*s; camera.top = 16*s; camera.bottom = -16*s; camera.updateProjectionMatrix();
+      camera.position.set(0, 13, 16);
+      if(focusTarget){
+        const ft = focusTarget.clone().applyAxisAngle(new THREE.Vector3(0,1,0), rotY);
+        camera.lookAt(ft.x, 0, ft.z);
+      } else {
+        camera.lookAt(0,0,0);
+      }
+      pts.rotation.y = -rotY*0.5;
+      // 扫描线往返移动
+      scanLine.position.z = Math.sin(t*0.4) * 18;
+      // 数据流脉冲(沿弧线)
+      flows.forEach(f=>{
+        f.t += 0.004*f.sp; if(f.t>1) f.t = 0;
+        f.dot.position.copy(f.curve.getPoint(f.t));
+        const pulse = Math.sin(f.t*Math.PI);
+        f.dot.scale.setScalar(0.6 + pulse*0.8);
+        f.line.material.opacity = 0.12 + pulse*0.25;
+      });
+      // 道路车流(光点沿道路往返)
+      roadFlows.forEach(r=>{
+        r.t += 0.008*r.sp; if(r.t>1) r.t = 0;
+        r.dot.position.lerpVectors(r.a, r.b, r.t);
+      });
+      // 门店链路(光点沿链路流向分店)
+      storeLinks.forEach(l=>{
+        l.t += 0.005*l.sp; if(l.t>1) l.t = 0;
+        l.dot.position.copy(l.curve.getPoint(l.t));
+      });
+      // 选中门店扫描环
+      STORES.forEach(s=>{
+        const sg = storeGroups[s.id];
+        if(sg && sg.scanRing && sg.scanRing.visible){
+          sg.scanRing.rotation.z = t*1.5;
+          sg.scanRing.scale.setScalar(0.8 + Math.sin(t*3)*0.2);
+        }
+      });
+      if(composer) composer.render(); else renderer.render(scene, camera);
+    }
+  };
+  document.getElementById('hud-nodes').textContent = STORES.length;
+  // 俯冲聚焦开场(zoom 2.5 → 5.0, 900ms ease-out;用 setTimeout 兜底避免后台 rAF 暂停)
+  (function intro(){
+    const FROM = 2.5, TO = 5.0, DUR = 900, start = performance.now();
+    function step(){
+      const t = Math.min((performance.now()-start)/DUR, 1);
+      const e = 1 - Math.pow(1-t, 3);
+      zoom = FROM + (TO-FROM)*e;
+      if(t < 1) setTimeout(step, 16);
+    }
+    setTimeout(step, 120);
+  })();
+}
+
+
+/* ================================================================
+ * 页面5:知识图谱(球状 3D)
+ * ================================================================ */
+const KG = { nodeMap:{}, meshes:{}, edgesGroup:null, nodesGroup:null, visible:{goal:true,role:true,model:true,ind:true,entity:true}, auto:true };
+function initGraph(){
+  const host = document.getElementById('kg-canvas');
+  if(!host || scenes.graph) return;
+  if(typeof THREE === 'undefined') return;
+  const w = host.clientWidth, h = host.clientHeight;
+  const renderer = new THREE.WebGLRenderer({antialias:true, alpha:true, canvas:host});
+  renderer.setSize(w,h); renderer.setPixelRatio(Math.min(devicePixelRatio,2));
+  renderer.setClearColor(0x000000,0);
+  const scene = new THREE.Scene();
+  const camera = new THREE.PerspectiveCamera(50, w/h, 0.1, 200);
+  camera.position.set(0, 2, 16);
+
+  const world = new THREE.Group(); scene.add(world);
+  scene.add(new THREE.AmbientLight(0x8899aa, 0.9));
+  const p1 = new THREE.PointLight(0x5eead4, 0.9, 60); p1.position.set(8,8,8); scene.add(p1);
+  const p2 = new THREE.PointLight(0x38bdf8, 0.7, 60); p2.position.set(-8,-4,-8); scene.add(p2);
+
+  // 构建节点映射
+  KG_NODES.forEach(n => KG.nodeMap[n.id] = n);
+  // 三层半径
+  const layerRadius = {goal:4.2, role:4.2, model:7.0, ind:7.0, entity:10.0};
+  // 按层分组计算球面位置
+  const groups = {};
+  KG_NODES.forEach(n => { (groups[n.key] = groups[n.key]||[]).push(n); });
+  const posOf = {};
+  Object.keys(groups).forEach(key => {
+    const arr = groups[key]; const R = layerRadius[key]; const N = arr.length;
+    arr.forEach((n,i)=>{
+      const y = 1 - 2*(i+0.5)/N; // 从北到南
+      const rad = Math.sqrt(1-y*y);
+      const theta = i*2.399963229728653; // golden angle
+      const x = Math.cos(theta)*rad, z = Math.sin(theta)*rad;
+      posOf[n.id] = new THREE.Vector3(x*R, y*R, z*R);
+    });
+  });
+
+  // 节点
+  const nodesGroup = new THREE.Group(); world.add(nodesGroup);
+  const meshMap = {};
+  const nodeSize = {goal:0.34, role:0.34, model:0.3, ind:0.18, entity:0.24};
+  KG_NODES.forEach(n => {
+    const lc = KG_LAYERS.find(l=>l.key===n.key).color;
+    const sp = new THREE.Mesh(new THREE.SphereGeometry(nodeSize[n.key], 20, 20),
+      new THREE.MeshStandardMaterial({color:new THREE.Color(lc), emissive:new THREE.Color(lc), emissiveIntensity:0.45, roughness:0.3}));
+    sp.position.copy(posOf[n.id]);
+    sp.userData = {id:n.id};
+    const halo = glowSprite(lc, nodeSize[n.key]*5);
+    halo.position.copy(posOf[n.id]);
+    const label = textSprite(n.label, '#eaeef6', 22); label.position.copy(posOf[n.id]).add(new THREE.Vector3(0,0.5,0)); label.scale.set(1.7,0.42,1);
+    nodesGroup.add(sp); nodesGroup.add(halo); nodesGroup.add(label);
+    meshMap[n.id] = {sp, halo, label, key:n.key};
+  });
+  KG.meshes = meshMap; KG.nodesGroup = nodesGroup;
+
+  // 边
+  const edgesGroup = new THREE.Group(); world.add(edgesGroup);
+  const edgeColorMap = {};
+  function buildEdges(){
+    edgesGroup.clear();
+    KG_EDGES.forEach(e=>{
+      const [a,b,rel,typ] = e;
+      if(!KG.visible[KG.nodeMap[a].key] || !KG.visible[KG.nodeMap[b].key]) return;
+      const pa = posOf[a], pb = posOf[b];
+      const geom = new THREE.BufferGeometry().setFromPoints([pa, pb]);
+      const col = new THREE.Color(KG_REL_COLOR[typ]||'#5eead4');
+      const line = new THREE.Line(geom, new THREE.LineBasicMaterial({color:col, transparent:true, opacity:0.2, blending:THREE.AdditiveBlending, depthWrite:false}));
+      edgesGroup.add(line);
+    });
+  }
+  buildEdges();
+  KG.edgesGroup = edgesGroup;
+
+  // 图层筛选
+  const filtersEl = $('#kg-filters');
+  filtersEl.innerHTML = KG_LAYERS.map(l =>
+    `<div class="kg-filter on" data-key="${l.key}"><span class="sw"></span><span class="kg-dot" style="background:${l.color}"></span>${esc(l.name)}</div>`).join('');
+  $$('#kg-filters .kg-filter').forEach(f => f.onclick = function(){
+    const k = this.dataset.key; KG.visible[k] = !KG.visible[k];
+    this.classList.toggle('on', KG.visible[k]);
+    applyKGFilter(); buildEdges();
+  });
+  function applyKGFilter(){
+    Object.keys(KG.meshes).forEach(id=>{
+      const m = KG.meshes[id];
+      const vis = KG.visible[m.key];
+      m.sp.visible = vis; m.halo.visible = vis; m.label.visible = vis;
+    });
+    document.getElementById('hud-nodes').textContent = Object.keys(KG.meshes).filter(id=>KG.visible[KG.meshes[id].key]).length;
+  }
+
+  // 交互
+  const ray = new THREE.Raycaster(); const mouse = new THREE.Vector2();
+  let dragging=false, px=0, py=0, rotY=0.2, targetY=0.2, rotX=0.2, targetX=0.2, zoom=1;
+  host.addEventListener('pointerdown', e=>{dragging=true;px=e.clientX;py=e.clientY;KG.auto=false;});
+  window.addEventListener('pointermove', e=>{ if(!dragging) return;
+    targetY += (e.clientX-px)*0.006; targetX = Math.min(1.3,Math.max(-1.3, targetX+(e.clientY-py)*0.005)); px=e.clientX; py=e.clientY; });
+  window.addEventListener('pointerup', ()=>{dragging=false;});
+  host.addEventListener('wheel', e=>{ zoom = Math.min(2.4, Math.max(0.5, zoom+e.deltaY*0.001)); }, {passive:true});
+  host.addEventListener('click', e=>{
+    const r = host.getBoundingClientRect();
+    mouse.x = ((e.clientX-r.left)/r.width)*2-1; mouse.y = -((e.clientY-r.top)/r.height)*2+1;
+    ray.setFromCamera(mouse, camera);
+    const meshes = Object.values(KG.meshes).map(m=>m.sp).filter(m=>m.visible);
+    const hits = ray.intersectObjects(meshes, false);
+    if(hits.length){ highlightKGNode(hits[0].object.userData.id); showKGDetail(hits[0].object.userData.id); } else { hideKGDetail(); clearKGHighlight(); }
+  });
+  function highlightKGNode(id){
+    Object.values(KG.meshes).forEach(m=>{ m.sp.material.emissiveIntensity = 0.45; m.sp.scale.setScalar(1); });
+    const relIds = new Set(KG_EDGES.filter(e=>e[0]===id||e[1]===id).map(e=>e[0]===id?e[1]:e[0]));
+    const sel = KG.meshes[id];
+    if(sel){ sel.sp.material.emissiveIntensity = 1.0; sel.sp.scale.setScalar(1.4); }
+    relIds.forEach(rid=>{ const rm = KG.meshes[rid]; if(rm){ rm.sp.material.emissiveIntensity = 0.8; rm.sp.scale.setScalar(1.18); } });
+  }
+  function clearKGHighlight(){ Object.values(KG.meshes).forEach(m=>{ m.sp.material.emissiveIntensity = 0.45; m.sp.scale.setScalar(1); }); }
+
+  scenes.graph = {
+    reset(){ rotY=0.2; targetY=0.2; rotX=0.2; targetX=0.2; zoom=1; KG.auto=true;
+      const b=document.getElementById('kg-rotate-btn'); if(b) b.textContent='自动旋转:开'; },
+    animate(t){
+      if(KG.auto) targetY += 0.0018;
+      rotY += (targetY-rotY)*0.08; rotX += (targetX-rotX)*0.08;
+      world.rotation.y = rotY; world.rotation.x = rotX;
+      const tv = new THREE.Vector3(0,2,16).multiplyScalar(1/zoom);
+      camera.position.lerp(tv, 0.12); camera.lookAt(0,0,0);
+      renderer.render(scene, camera);
+    },
+    resize(){ const w2=host.clientWidth,h2=host.clientHeight; camera.aspect=w2/h2; camera.updateProjectionMatrix(); renderer.setSize(w2,h2); }
+  };
+  document.getElementById('hud-nodes').textContent = KG_NODES.length;
+}
+window.kgReset = function(){
+  if(scenes.graph) scenes.graph.reset();
+};
+window.kgToggleRotate = function(){
+  KG.auto = !KG.auto;
+  const b = document.getElementById('kg-rotate-btn');
+  if(b) b.textContent = '自动旋转:' + (KG.auto?'开':'关');
+};
+function showKGDetail(id){
+  const n = KG.nodeMap[id]; if(!n) return;
+  const lc = KG_LAYERS.find(l=>l.key===n.key).color;
+  const layerName = KG_LAYERS.find(l=>l.key===n.key).name;
+  const rels = KG_EDGES.filter(e=>e[0]===id || e[1]===id).map(e=>{
+    const other = e[0]===id ? e[1] : e[0];
+    const on = KG.nodeMap[other];
+    const dir = e[0]===id ? '→' : '←';
+    return `<div style="font-size:10px;padding:2px 0;color:var(--txt2)"><span style="color:var(--txt3)">${dir} ${esc(e[2])} </span><span style="color:var(--cyan)">${esc(on?on.label:other)}</span></div>`;
+  }).join('');
+  $('#kg-detail-content').innerHTML =
+    `<div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">
+       <span class="kg-dot" style="background:${lc}"></span>
+       <b style="color:var(--txt)">${esc(n.label)}</b>
+       <span class="tag" style="color:${lc}">${esc(n.tag)}</span>
+     </div>
+     <div style="font-size:10px;color:var(--txt3);margin-bottom:4px">${esc(id)} · ${esc(layerName)}</div>
+     <div class="hr"></div>
+     <div style="font-size:10px;color:var(--txt3);margin-bottom:6px">关联关系(${rels?KG_EDGES.filter(e=>e[0]===id||e[1]===id).length:0})</div>
+     ${rels}`;
+  $('#kg-detail').style.display = 'block';
+}
+function hideKGDetail(){ $('#kg-detail').style.display = 'none'; }
+
+/* ================================================================
+ * 页面6:决策驾驶舱
+ * ================================================================ */
+let curRole = 'R总经理';
+let curBoard = 'cap';
+const ROLE_BOARD = {R总经理:'cap', R店长:'inv', R销售经理:'sales'};
+const BOARDS = [
+  {key:'sales', name:'销售管理', icon:'📈'},
+  {key:'inv', name:'库存管理', icon:'📦'},
+  {key:'cap', name:'资金全景', icon:'💰'}
+];
+const BOARD_MODULE = {sales:'销售', inv:'库存', cap:'财务'};
+// 每个角色的核心 KPI(看板多元化)
+const ROLE_KPI = {
+  R总经理:[
+    {n:'集团ROS', v:'-3.02%', c:'#f27070'},{n:'ROE', v:'28%', c:'#34d399'},
+    {n:'加权融资成本', v:'6.2%', c:'#e6c15a'},{n:'费用率', v:'61.7%', c:'#f27070'}
+  ],
+  R店长:[
+    {n:'库存周转率', v:'0.8', c:'#e6c15a'},{n:'售后毛利占比', v:'51%', c:'#34d399'},
+    {n:'库存深度', v:'2.1', c:'#f27070'},{n:'客户保持率', v:'40%', c:'#e6c15a'}
+  ],
+  R销售经理:[
+    {n:'线索转化率', v:'20%', c:'#e6c15a'},{n:'单车毛利GP3', v:'0.9万', c:'#34d399'},
+    {n:'顾问人均销量', v:'18台', c:'#5eead4'},{n:'返利实现率', v:'78%', c:'#f27070'}
+  ]
+};
+// 角色视角说明(板块差异化标题)
+const ROLE_FOCUS = {
+  R总经理:{sales:'多店销量对比 · 市场大盘', inv:'多店库存总量 · 资金效率', cap:'资本结构 · 股东回报'},
+  R店长:{sales:'单店毛利 · 成交转化', inv:'单店周转 · 积压预警', cap:'单店费用 · 售后吸收'},
+  R销售经理:{sales:'线索转化 · 返利冲量', inv:'畅销缺货 · 补货建议', cap:'单车资金 · 返利台账'}
+};
+// 智能问答预设(问题 + 关键词匹配 + 回答)
+const QA = [
+  {q:'库存积压怎么处理?', kw:['库存','积压','清库','库龄'],
+    tools:['🔍 检索 DMS 库存数据','📊 分析库龄结构','🧮 计算资金占用'],
+    steps:['识别超90天库龄车','计算已耗财务费用','对比调价/调拨/搭售方案'],
+    a:'长库龄(>90天)车启动调价清库:降1万7天售出,净止损¥1832.6;补货按库存系数<0.8才进货,避免再次积压。', related:['补货进货怎么算?','库存资金占用多少?']},
+  {q:'哪个门店销量最高?', kw:['销量','最高','门店','冠军','销冠'],
+    tools:['📊 查询集团销量看板','🏆 门店销量排行'],
+    steps:['汇总10家门店销量','识别销量冠军门店','核对销量数据'],
+    a:'苏州宝隆(东风本田)2024年销量1577台,连续5年江苏省销量第一,白金钥匙奖全国第九。', related:['各门店销量对比?','哪个门店利润最高?']},
+  {q:'融资成本怎么降低?', kw:['融资','成本','利率','资金'],
+    tools:['💰 检索融资台账','🧮 计算加权融资成本'],
+    steps:['对比各渠道利率','计算优化后成本率','测算年省利息'],
+    a:'加权融资成本6.2%偏高,用银承(3.6%)和信用证(3.25%)替代AFC(7.68%),可降至4.1%,年省约40万利息。', related:['融资渠道有哪些?','资金流向怎么优化?']},
+  {q:'客户流失怎么办?', kw:['客户','流失','召回','保持'],
+    tools:['👥 查询 CRM 客户数据','📈 分析客户保持率'],
+    steps:['识别流失客户','分析流失原因','生成召回策略'],
+    a:'售后客户保持率40%低于健康线60%,启动流失客户召回话术,提前6个月预警,高意向线索优先金牌顾问秒级响应。', related:['客户保持率目标多少?','线索转化怎么提升?']},
+  {q:'费用率怎么控制?', kw:['费用','成本','管控','开支'],
+    tools:['💵 检索费用明细','🧮 计算费用率','📊 对比行业基准'],
+    steps:['拆解费用构成','对比行业基准18%','生成降费方案'],
+    a:'费用率61.7%超标,人力成本占营收24%超阈值18%,优化编制+调整提成+市场费削减20万,费用率可降至18%。', related:['人力成本怎么优化?','市场费用怎么分配?']},
+  {q:'售后怎么提升产值?', kw:['售后','产值','毛利','维修'],
+    tools:['🔧 查询售后数据','📊 分析售后毛利结构'],
+    steps:['识别售后利润占比','分析产值提升空间','生成养护方案'],
+    a:'售后贡献51%利润,是盈利基本盘。提升保养/召回自动提醒、流失客户召回话术、个性化养护方案,售后吸收率目标100%-150%。', related:['售后毛利结构如何?','二手车业务怎么做?']}
+];
+let qaTimer = null;
+function stripHtml(s){ return (s||'').replace(/<[^>]+>/g,''); }
+function renderQA(){
+  const el = document.getElementById('qa-body');
+  if(!el) return;
+  el.innerHTML = `<div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+    <input id="qa-input" placeholder="输入问题,如:库存积压怎么办?" style="flex:1;min-width:150px;padding:6px 10px;background:rgba(255,255,255,0.03);border:1px solid var(--line2);border-radius:6px;color:var(--txt);font-size:12px" onkeydown="if(event.key==='Enter')askQuestion(this.value)">
+    <button class="speed-btn" style="padding:6px 12px;cursor:pointer" onclick="askQuestion(document.getElementById('qa-input').value)">提问</button>
+    <button class="speed-btn" style="padding:6px 10px;cursor:pointer;color:var(--txt3)" onclick="clearChat()">清空</button>
+  </div>
+  <div id="qa-presets" style="display:flex;gap:6px;flex-wrap:wrap;margin-top:4px">${QA.map(a=>`<span class="tag" style="color:var(--cyan);cursor:pointer;padding:3px 8px;font-size:10px" onclick="askQuestion('${a.q}')">${a.q}</span>`).join('')}</div>
+  <div id="qa-chat" style="margin-top:8px;display:flex;flex-direction:column;gap:8px;max-height:300px;overflow:auto"></div>
+  <div id="qa-related" style="margin-top:8px;display:flex;gap:6px;flex-wrap:wrap;align-items:center"></div>`;
+}
+let qaOpen = true;
+function toggleQA(){
+  qaOpen = !qaOpen;
+  const body = document.getElementById('qa-body');
+  const ico = document.getElementById('qa-toggle-ico');
+  const float = document.getElementById('qa-float');
+  if(body) body.style.display = qaOpen ? 'flex' : 'none';
+  if(ico) ico.textContent = qaOpen ? '▲' : '▼';
+  if(float) float.style.width = qaOpen ? '380px' : '180px';
+}
+function askQuestion(q){
+  q = (q||'').trim();
+  if(!q) return;
+  const chat = document.getElementById('qa-chat');
+  if(!chat) return;
+  const inp = document.getElementById('qa-input'); if(inp) inp.value = '';
+  // 用户气泡(右对齐)
+  const ub = document.createElement('div');
+  ub.style.cssText = 'align-self:flex-end;max-width:70%;padding:8px 12px;background:rgba(94,234,212,0.12);border:1px solid var(--line);border-radius:10px 10px 2px 10px;font-size:12px;color:var(--txt);animation:fadeUp .3s';
+  ub.innerHTML = q;
+  chat.appendChild(ub);
+  // 匹配回答
+  let best = null, bestScore = 0;
+  QA.forEach(item=>{ let s=0; item.kw.forEach(k=>{ if(q.includes(k)) s++; }); if(s>bestScore){ bestScore=s; best=item; } });
+  const tools = best ? (best.tools||[]) : ['🔍 检索知识库'];
+  const steps = best ? (best.steps||[]) : [];
+  const text = best ? best.a : '未找到相关答案。您可以问:库存积压、销量冠军、融资成本、客户流失、费用管控、售后产值等经营问题。';
+  // AI 气泡(展示 Agent 分析过程 + 工具调用)
+  const ab = document.createElement('div');
+  ab.style.cssText = 'align-self:flex-start;max-width:82%;padding:8px 12px;background:rgba(255,255,255,0.04);border:1px solid var(--line2);border-radius:10px 10px 10px 2px;font-size:12px;color:var(--txt);line-height:1.6;animation:fadeUp .3s';
+  ab.innerHTML = '<div style="font-size:11px;color:var(--txt3)">🤔 <span class="pulse" style="display:inline-block">AI 正在分析…</span></div>';
+  chat.appendChild(ab);
+  if(qaTimer) clearInterval(qaTimer);
+  if(window._qaDelays) window._qaDelays.forEach(d=>clearTimeout(d));
+  window._qaDelays = [];
+  const base = 500;
+  // 工具调用(逐个显示)
+  tools.forEach((tool, i)=>{
+    window._qaDelays.push(setTimeout(()=>{
+      const row = document.createElement('div');
+      row.style.cssText = 'margin:3px 0;font-size:11px;color:var(--cyan);animation:fadeUp .3s';
+      row.innerHTML = '⚙️ <span style="color:var(--txt3)">调用工具</span> ' + tool;
+      ab.appendChild(row); chat.scrollTop = chat.scrollHeight;
+    }, base + i*450));
+  });
+  // 分析步骤(逐个显示)
+  steps.forEach((step, i)=>{
+    window._qaDelays.push(setTimeout(()=>{
+      const row = document.createElement('div');
+      row.style.cssText = 'margin:2px 0;font-size:11px;color:var(--txt2);animation:fadeUp .3s';
+      row.innerHTML = '<span style="color:var(--warn)">'+(i+1)+'.</span> ' + step;
+      ab.appendChild(row); chat.scrollTop = chat.scrollHeight;
+    }, base + tools.length*450 + i*350));
+  });
+  // 最终回答(打字机)
+  const answerDelay = base + tools.length*450 + steps.length*350 + 250;
+  window._qaDelays.push(setTimeout(()=>{
+    const ans = document.createElement('div');
+    ans.style.cssText = 'margin-top:6px;padding-top:6px;border-top:1px dashed rgba(79,209,197,0.15);font-size:12px;color:var(--txt);line-height:1.6';
+    ab.appendChild(ans);
+    const plain = stripHtml(text);
+    let i = 0;
+    qaTimer = setInterval(()=>{ i++; ans.textContent = '✅ ' + plain.slice(0,i); chat.scrollTop = chat.scrollHeight; if(i>=plain.length){ clearInterval(qaTimer); showRelated(best); } }, 14);
+  }, answerDelay));
+}
+function showRelated(best){
+  const el = document.getElementById('qa-related');
+  if(!el) return;
+  const related = best ? (best.related||[]) : [];
+  el.innerHTML = related.length ? `<span style="font-size:10px;color:var(--txt3)">💡 追问:</span>` + related.map(r=>`<span class="tag" style="color:var(--warn);cursor:pointer;padding:3px 8px;font-size:10px" onclick="askQuestion('${r}')">${r}</span>`).join('') : '';
+}
+function clearChat(){
+  if(qaTimer) clearInterval(qaTimer);
+  if(window._qaDelays) window._qaDelays.forEach(d=>clearTimeout(d));
+  window._qaDelays = [];
+  const chat = document.getElementById('qa-chat'); if(chat) chat.innerHTML = '';
+  const rel = document.getElementById('qa-related'); if(rel) rel.innerHTML = '';
+}
+function initCockpit(){
+  const roles = [
+    {key:'R总经理', name:'集团经营者', sub:'战略·资本·多店对比'},
+    {key:'R店长', name:'店长', sub:'单店利润·库存·售后'},
+    {key:'R销售经理', name:'销售经理', sub:'线索·成交·单车毛利'}
+  ];
+  $('#cockpit-roles').innerHTML = roles.map(r =>
+    `<div class="dim-tab ${r.key===curRole?'active':''}" data-role="${r.key}">${r.name}<span style="font-size:9px;color:var(--txt3)"> ${r.sub}</span></div>`).join('') +
+    `<input id="cockpit-search" placeholder="🔍 搜索场景/目标/模块..." style="margin-left:auto;padding:5px 10px;background:rgba(255,255,255,0.03);border:1px solid var(--line2);border-radius:6px;color:var(--txt);font-size:12px;width:200px" oninput="renderCockpit()">`;
+  $$('#cockpit-roles .dim-tab').forEach(t => t.onclick = function(){
+    curRole = this.dataset.role; curBoard = ROLE_BOARD[curRole]; initCockpit();
+  });
+  // 板块 tab(每个角色都能切三个板块)
+  $('#cockpit-boards').innerHTML = BOARDS.map(b =>
+    `<div class="dim-tab ${b.key===curBoard?'active':''}" data-board="${b.key}">${b.icon} ${b.name}</div>`).join('');
+  $$('#cockpit-boards .dim-tab').forEach(t => t.onclick = function(){
+    curBoard = this.dataset.board; initCockpit();
+  });
+  renderCockpit();
+}
+function renderBoard(boardKey){
+  const board = document.getElementById('cockpit-board');
+  if(!board) return;
+  board.style.gridTemplateColumns = '1fr 1fr 1fr';
+  const roleName = {R总经理:'集团经营者', R店长:'店长', R销售经理:'销售经理'}[curRole] || '';
+  const kpis = ROLE_KPI[curRole] || [];
+  const focus = (ROLE_FOCUS[curRole]||{})[boardKey] || '';
+  const kpiBar = `<div class="glass" style="grid-column:1/-1;padding:10px 12px;display:flex;align-items:center;gap:14px">
+    <div style="font-size:12px;color:var(--cyan);font-weight:600;white-space:nowrap">${roleName}视角 · ${focus}</div>
+    ${kpis.map(k=>`<div style="flex:1;text-align:center"><div class="mono" style="font-size:17px;color:${k.c}">${k.v}</div><div style="font-size:9px;color:#6e7d92">${k.n}</div></div>`).join('')}
+  </div>`;
+  const box = (t,en,id,extra='')=>`<div class="glass" style="padding:10px;display:flex;flex-direction:column${extra}"><div class="panel-title">${t} <span class="en">${en}</span></div><div id="${id}" style="flex:1;min-height:150px"></div></div>`;
+  const al = {color:'#9aa7bb',fontSize:9}, vl = {color:'#6e7d92',fontSize:9}, sp = {lineStyle:{color:C.split}};
+  const initC = id => { const el=document.getElementById(id); if(el && el._c) el._c.dispose(); const c=echarts.init(el); if(el) el._c=c; return c; };
+  const R = {
+    funnel:(c,data,colors)=>{ c.setOption({tooltip:{trigger:'item'},series:[{type:'funnel',left:'10%',width:'80%',top:8,bottom:8,sort:'descending',gap:3,label:{color:'#eaeef6',fontSize:9},labelLine:{lineStyle:{color:C.split}},itemStyle:{borderColor:'#050b14',borderWidth:1},data:data.map((f,i)=>({name:f.name,value:f.v,itemStyle:{color:colors[i]}}))}]}); },
+    bar:(c,cats,vals,color,unit='')=>{ c.setOption({tooltip:{trigger:'axis'},grid:{left:40,right:14,top:20,bottom:24},xAxis:{type:'category',data:cats,axisLabel:al,axisLine:{lineStyle:{color:C.split}}},yAxis:{type:'value',axisLabel:vl,splitLine:sp},series:[{type:'bar',barWidth:'46%',data:vals.map(v=>({value:v,itemStyle:{color}})),label:{show:true,position:'top',color:'#eaeef6',fontSize:9,formatter:p=>p.value+unit}}]}); },
+    hbar:(c,cats,vals,color,unit='')=>{ c.setOption({tooltip:{trigger:'axis'},grid:{left:44,right:24,top:14,bottom:24},xAxis:{type:'value',axisLabel:vl,splitLine:sp},yAxis:{type:'category',data:[...cats].reverse(),axisLabel:al,axisLine:{lineStyle:{color:C.split}}},series:[{type:'bar',barWidth:'52%',data:[...vals].reverse().map(v=>({value:v,itemStyle:{color}})),label:{show:true,position:'right',color:color,fontSize:9,formatter:p=>p.value+unit}}]}); },
+    line:(c,cats,vals,color,area=true)=>{ c.setOption({tooltip:{trigger:'axis'},grid:{left:40,right:14,top:20,bottom:24},xAxis:{type:'category',data:cats,axisLabel:al,axisLine:{lineStyle:{color:C.split}},boundaryGap:false},yAxis:{type:'value',axisLabel:vl,splitLine:sp},series:[{type:'line',smooth:true,data:vals,symbolSize:6,itemStyle:{color},lineStyle:{color,width:2},areaStyle:area?{color:color+'22'}:null}]}); },
+    pie:(c,data)=>{ c.setOption({tooltip:{trigger:'item'},legend:{bottom:0,left:'center',textStyle:{color:'#9aa7bb',fontSize:9},itemWidth:8,itemHeight:8},series:[{type:'pie',radius:['40%','64%'],center:['50%','44%'],label:{color:'#eaeef6',fontSize:9,formatter:'{b}\n{c}'},data:data.map(d=>({name:d.name,value:d.v,itemStyle:{color:d.c}}))}]}); },
+    stack:(c,cats,series)=>{ c.setOption({tooltip:{trigger:'axis'},legend:{textStyle:{color:'#9aa7bb',fontSize:9},top:0},grid:{left:40,right:14,top:28,bottom:24},xAxis:{type:'category',data:cats,axisLabel:al,axisLine:{lineStyle:{color:C.split}}},yAxis:{type:'value',name:'台',nameTextStyle:{color:'#6e7d92',fontSize:9},axisLabel:vl,splitLine:sp},series:series}); },
+    barLine:(c,cats,barData,lineData)=>{ c.setOption({tooltip:{trigger:'axis'},grid:{left:44,right:44,top:20,bottom:24},xAxis:{type:'category',data:cats,axisLabel:{...al,rotate:12},axisLine:{lineStyle:{color:C.split}}},yAxis:[{type:'value',axisLabel:vl,splitLine:sp},{type:'value',axisLabel:{...vl,formatter:'{value}%'},splitLine:{show:false}}],series:[{name:'余额',type:'bar',barWidth:'38%',data:barData},{name:'利率',type:'line',yAxisIndex:1,smooth:true,symbolSize:5,data:lineData,lineStyle:{color:'#5eead4',width:2},itemStyle:{color:'#5eead4'},label:{show:true,position:'top',color:'#5eead4',fontSize:8,formatter:'{c}%'}}]}); },
+    radar:(c,indicator,cur,target)=>{ c.setOption({tooltip:{},radar:{indicator:indicator,radius:'60%',axisName:{color:'#9aa7bb',fontSize:9},splitLine:{lineStyle:{color:C.split}},splitArea:{areaStyle:{color:['rgba(94,234,212,0.02)','rgba(94,234,212,0.04)']}},axisLine:{lineStyle:{color:C.split}}},series:[{type:'radar',data:[{value:cur,name:'现状',areaStyle:{color:'rgba(94,234,212,0.25)'},lineStyle:{color:'#5eead4'},itemStyle:{color:'#5eead4'}},{value:target,name:'目标',areaStyle:{color:'rgba(56,189,248,0.08)'},lineStyle:{color:'#5ec8f7',type:'dashed'},itemStyle:{color:'#5ec8f7'}}]}]}); },
+    gauge:(c,name,val,max,color)=>{ c.setOption({series:[{type:'gauge',min:0,max:max,radius:'85%',startAngle:220,endAngle:-40,pointer:{show:false},progress:{show:true,width:10,itemStyle:{color}},axisLine:{lineStyle:{width:10,color:[[1,'rgba(255,255,255,0.08)']]}},axisTick:{show:false},splitLine:{show:false},axisLabel:{show:false},detail:{valueAnimation:true,fontSize:20,color:'#eaeef6',formatter:'{value}%'},title:{show:true,offsetCenter:[0,'68%'],fontSize:10,color:'#6e7d92'},data:[{value:val,name:name}]}]}); },
+    sankey:(c,data,links)=>{ c.setOption({tooltip:{trigger:'item'},series:[{type:'sankey',left:8,right:40,top:8,bottom:8,nodeWidth:10,nodeGap:8,nodeAlign:'justify',label:{color:'#9aa7bb',fontSize:8},lineStyle:{color:'gradient',opacity:0.2,curveness:0.5},data:data,links:links}]}); }
+  };
+  const T = {
+    rebate:`<div style="font-size:9px;color:#6e7d92;max-height:150px;overflow:auto"><table class="tbl"><tr><th>日期</th><th>政策</th><th class="num">进账</th></tr>${SALES.rebate.map(r=>`<tr><td>${esc(r.d)}</td><td class="nm">${esc(r.p)}</td><td class="num">¥${fmt(r.a)}</td></tr>`).join('')}</table></div>`,
+    policy:`<div style="font-size:9px;color:#6e7d92;max-height:150px;overflow:auto"><table class="tbl"><tr><th>奖励</th><th>标准</th><th class="num">系数</th></tr>${SALES.policy.map(p=>`<tr><td class="nm">${esc(p.t)}</td><td>${esc(p.std)}</td><td class="num">${esc(p.coef)}</td></tr>`).join('')}</table></div>`,
+    vin:`<div style="font-size:9px;color:#6e7d92;max-height:150px;overflow:auto"><table class="tbl"><tr><th>VIN</th><th>车型</th><th class="num">天数</th><th>状态</th></tr>${INV.vin.map(v=>`<tr><td>${esc(v.v)}</td><td class="nm">${esc(v.m)}</td><td class="num">${v.days}天</td><td><span class="tag" style="color:${v.days>90?'#f27070':v.days>60?'#f97316':'#34d399'}">${v.flag}</span></td></tr>`).join('')}</table></div>`,
+    kpi21:`<div style="font-size:9px;color:#6e7d92;max-height:150px;overflow:auto"><table class="tbl"><tr><th>因子</th><th>KPI</th><th class="num">值</th></tr>${CAP.kpi21.map(k=>`<tr><td class="nm">${esc(k.f)}</td><td>${esc(k.k)}</td><td class="num">${fmt(k.v)}${esc(k.u)}</td></tr>`).join('')}</table></div>`
+  };
+  // 每个角色每个板块 6 个图表配置(类型丰富·色彩多样·数据多元)
+  const CFG = {
+    sales:{
+      R总经理:[
+        {t:'月度销量趋势',en:'TREND',f:c=>R.line(c,SALES.trend.months,SALES.trend.v,'#5eead4')},
+        {t:'市场活动ROI',en:'ROI',f:c=>R.bar(c,SALES.roi.map(r=>r.n),SALES.roi.map(r=>r.roi),'#a78bfa')},
+        {t:'单车毛利结构',en:'GP',f:c=>R.bar(c,SALES.gp.map(g=>g.name),SALES.gp.map(g=>g.v),'#34d399','万')},
+        {t:'销售顾问业绩',en:'RANK',f:c=>R.hbar(c,SALES.rank.map(r=>r.n),SALES.rank.map(r=>r.cr),'#5eead4','%')},
+        {t:'返利账户台账',en:'REBATE',f:c=>{document.getElementById(c._id).innerHTML=T.rebate;}},
+        {t:'商务政策测算',en:'POLICY',f:c=>{document.getElementById(c._id).innerHTML=T.policy;}}
+      ],
+      R店长:[
+        {t:'销售漏斗',en:'FUNNEL',f:c=>R.funnel(c,SALES.funnel,['#5eead4','#38bdf8','#a78bfa','#e6c15a','#f27070'])},
+        {t:'单车毛利结构',en:'GP',f:c=>R.bar(c,SALES.gp.map(g=>g.name),SALES.gp.map(g=>g.v),'#34d399','万')},
+        {t:'销售顾问业绩',en:'RANK',f:c=>R.hbar(c,SALES.rank.map(r=>r.n),SALES.rank.map(r=>r.cr),'#5eead4','%')},
+        {t:'月度销量趋势',en:'TREND',f:c=>R.line(c,SALES.trend.months,SALES.trend.v,'#38bdf8')},
+        {t:'市场活动ROI',en:'ROI',f:c=>R.bar(c,SALES.roi.map(r=>r.n),SALES.roi.map(r=>r.roi),'#a78bfa')},
+        {t:'返利测算',en:'REBATE',f:c=>{document.getElementById(c._id).innerHTML=T.rebate;}}
+      ],
+      R销售经理:[
+        {t:'线索转化漏斗',en:'FUNNEL',f:c=>R.funnel(c,SALES.funnel,['#5eead4','#38bdf8','#a78bfa','#e6c15a','#f27070'])},
+        {t:'顾问成交率排行',en:'RANK',f:c=>R.hbar(c,SALES.rank.map(r=>r.n),SALES.rank.map(r=>r.cr),'#5eead4','%')},
+        {t:'月度销量趋势',en:'TREND',f:c=>R.line(c,SALES.trend.months,SALES.trend.v,'#5eead4')},
+        {t:'市场活动ROI',en:'ROI',f:c=>R.bar(c,SALES.roi.map(r=>r.n),SALES.roi.map(r=>r.roi),'#a78bfa')},
+        {t:'返利测算',en:'REBATE',f:c=>{document.getElementById(c._id).innerHTML=T.rebate;}},
+        {t:'商务政策',en:'POLICY',f:c=>{document.getElementById(c._id).innerHTML=T.policy;}}
+      ]
+    },
+    inv:{
+      R总经理:[
+        {t:'车型库存资金占用',en:'CAPITAL',f:c=>R.hbar(c,INV.cap.map(x=>x.n),INV.cap.map(x=>x.v),'#e6c15a','M')},
+        {t:'库龄分布',en:'AGING',f:c=>R.pie(c,INV.aging)},
+        {t:'库存资金趋势',en:'TREND',f:c=>R.line(c,['1月','2月','3月','4月','5月','6月'],[52,48,45,42,40,38],'#f27070')},
+        {t:'车型×库龄结构',en:'MODEL',f:c=>R.stack(c,INV.models,INV.aging.map((a,i)=>({name:a.name,type:'bar',stack:'a',barWidth:'52%',data:INV.stack.map(m=>m.v[i]),itemStyle:{color:a.c}})))},
+        {t:'VIN级含息占用',en:'VIN',f:c=>{document.getElementById(c._id).innerHTML=T.vin;}},
+        {t:'库存总量对比',en:'TOTAL',f:c=>R.bar(c,INV.cap.map(x=>x.n),INV.cap.map(x=>x.v),'#5eead4','台')}
+      ],
+      R店长:[
+        {t:'车型×库龄结构',en:'MODEL',f:c=>R.stack(c,INV.models,INV.aging.map((a,i)=>({name:a.name,type:'bar',stack:'a',barWidth:'52%',data:INV.stack.map(m=>m.v[i]),itemStyle:{color:a.c}})))},
+        {t:'库龄分布',en:'AGING',f:c=>R.pie(c,INV.aging)},
+        {t:'VIN级含息占用',en:'VIN',f:c=>{document.getElementById(c._id).innerHTML=T.vin;}},
+        {t:'库存资金占用',en:'CAPITAL',f:c=>R.hbar(c,INV.cap.map(x=>x.n),INV.cap.map(x=>x.v),'#e6c15a','M')},
+        {t:'库存资金趋势',en:'TREND',f:c=>R.line(c,['1月','2月','3月','4月','5月','6月'],[52,48,45,42,40,38],'#f27070')},
+        {t:'超库龄车排行',en:'OVERDUE',f:c=>R.bar(c,['冠道','雅阁','皓影','型格'],[95,110,72,60],'#f27070','天')}
+      ],
+      R销售经理:[
+        {t:'畅销车型库存',en:'HOT',f:c=>R.bar(c,INV.cap.map(x=>x.n),INV.cap.map(x=>x.v),'#5eead4','台')},
+        {t:'库龄分布',en:'AGING',f:c=>R.pie(c,INV.aging)},
+        {t:'缺货预警',en:'SHORTAGE',f:c=>R.bar(c,['思域','CR-V','型格','雅阁'],[0,0,2,1],'#f27070','台')},
+        {t:'库存资金占用',en:'CAPITAL',f:c=>R.hbar(c,INV.cap.map(x=>x.n),INV.cap.map(x=>x.v),'#e6c15a','M')},
+        {t:'VIN级含息占用',en:'VIN',f:c=>{document.getElementById(c._id).innerHTML=T.vin;}},
+        {t:'库存周转率',en:'TURNOVER',f:c=>R.gauge(c,'库存周转率',48,100,'#e6c15a')}
+      ]
+    },
+    cap:{
+      R总经理:[
+        {t:'融资渠道与利率',en:'FUNDING',f:c=>R.barLine(c,CAP.source.map(s=>s.n),CAP.source.map(s=>({value:s.v,itemStyle:{color:s.c}})),CAP.source.map(s=>s.rate))},
+        {t:'经营结果ROS',en:'ROS',f:c=>R.bar(c,['收入','成本','毛利','经营利润'],[613.5,603,10.5,-18.5],'#5eead4','万')},
+        {t:'四业务线贡献',en:'LINES',f:c=>R.bar(c,CAP.lines.map(l=>l.n),CAP.lines.map(l=>l.contrib),'#34d399','万')},
+        {t:'经营质量雷达',en:'QUALITY',f:c=>R.radar(c,[{name:'盈利性',max:100},{name:'成长性',max:100},{name:'抗风险',max:100}],[28,55,40],[70,75,80])},
+        {t:'资金流向',en:'FLOW',f:c=>R.sankey(c,[{name:'融资'},{name:'AFC'},{name:'银承'},{name:'信用证'},{name:'法人透支'},{name:'押汇'},{name:'库存'},{name:'应收'},{name:'费用'}],[{source:'融资',target:'库存',value:1200},{source:'融资',target:'应收',value:700},{source:'融资',target:'费用',value:650},{source:'AFC',target:'库存',value:1200},{source:'银承',target:'应收',value:700},{source:'信用证',target:'费用',value:450},{source:'法人透支',target:'库存',value:200},{source:'押汇',target:'费用',value:150}])},
+        {t:'业务驱动21KPI',en:'KPI',f:c=>{document.getElementById(c._id).innerHTML=T.kpi21;}}
+      ],
+      R店长:[
+        {t:'四业务线贡献',en:'LINES',f:c=>R.bar(c,CAP.lines.map(l=>l.n),CAP.lines.map(l=>l.contrib),'#34d399','万')},
+        {t:'费用构成',en:'EXPENSE',f:c=>R.pie(c,[{name:'人力',v:150,c:'#f27070'},{name:'市场',v:62,c:'#e6c15a'},{name:'财务',v:48,c:'#5eead4'},{name:'管理',v:40,c:'#a78bfa'}])},
+        {t:'售后毛利产值',en:'AFTERSALES',f:c=>R.bar(c,['售后交车','售后产值','售后毛利'],[6064,852,441],'#34d399')},
+        {t:'经营结果ROS',en:'ROS',f:c=>R.bar(c,['收入','成本','毛利','经营利润'],[613.5,603,10.5,-18.5],'#5eead4','万')},
+        {t:'经营质量雷达',en:'QUALITY',f:c=>R.radar(c,[{name:'盈利性',max:100},{name:'成长性',max:100},{name:'抗风险',max:100}],[28,55,40],[70,75,80])},
+        {t:'业务驱动21KPI',en:'KPI',f:c=>{document.getElementById(c._id).innerHTML=T.kpi21;}}
+      ],
+      R销售经理:[
+        {t:'返利账户台账',en:'REBATE',f:c=>{document.getElementById(c._id).innerHTML=T.rebate;}},
+        {t:'融资成本趋势',en:'COST',f:c=>R.line(c,['1月','2月','3月','4月','5月','6月'],[7.2,7.0,6.8,6.5,6.3,6.2],'#e6c15a')},
+        {t:'单车资金占用',en:'PER-UNIT',f:c=>R.bar(c,['单车成本','单车费用','单车资金'],[13.2,1.8,15.0],'#5eead4','万')},
+        {t:'四业务线贡献',en:'LINES',f:c=>R.bar(c,CAP.lines.map(l=>l.n),CAP.lines.map(l=>l.contrib),'#34d399','万')},
+        {t:'融资渠道与利率',en:'FUNDING',f:c=>R.barLine(c,CAP.source.map(s=>s.n),CAP.source.map(s=>({value:s.v,itemStyle:{color:s.c}})),CAP.source.map(s=>s.rate))},
+        {t:'线索转化率',en:'CONVERSION',f:c=>R.gauge(c,'线索转化率',20,100,'#5eead4')}
+      ]
+    }
+  };
+  const cfg = (CFG[boardKey]||{})[curRole] || [];
+  board.innerHTML = kpiBar + cfg.map((ch,i)=>box(ch.t, ch.en, 'bd-'+i, ch.t.includes('台账')||ch.t.includes('政策')||ch.t.includes('VIN')||ch.t.includes('KPI')||ch.t.includes('测算')?';overflow:auto':'')).join('');
+  cfg.forEach((ch,i)=>{ const id='bd-'+i; const c=initC(id); c._id=id; try{ ch.f(c); }catch(e){} });
+}
+function renderCockpit(){
+  renderBoard(curBoard);
+  const kw = (document.getElementById('cockpit-search') ? document.getElementById('cockpit-search').value : '').trim().toLowerCase();
+  const list = SCENARIOS.filter(s=>s.module===BOARD_MODULE[curBoard] && (!kw || s.name.includes(kw) || s.goal.includes(kw) || s.g.toLowerCase().includes(kw)));
+  const cols = [
+    {k:'感知', t:'看到什么数据', icon:'👁'},
+    {k:'决策', t:'做什么判断', icon:'⚡'},
+    {k:'行动', t:'执行什么动作', icon:'▶'}
+  ];
+  const roleNames = {R总经理:'集团经营者', R店长:'店长', R销售经理:'销售经理'};
+  $('#cockpit-content').innerHTML = cols.map((c,ci)=>{
+    const items = list.filter(s=>{
+      return ci===0 ? true : ci===1 ? true : true;
+    });
+    return `<div class="glass" style="padding:12px;min-height:0">
+      <div class="panel-title">${c.icon} ${c.k}列 <span class="en">${c.t}</span></div>
+      ${list.map((s,si)=>{
+        if(ci===0) return `<div class="scn-card" data-g="${s.g}" onclick="openScenario('${s.g}')" onmouseenter="highlightCockpit('${s.g}')" onmouseleave="clearCockpitHighlight()">
+          <div class="scn-head"><span class="scn-g">${s.g}</span><span class="scn-name">${esc(s.name)}</span><span class="scn-role">${esc(s.module)}</span></div>
+          <div style="font-size:10px;color:var(--txt3);margin-top:4px">目标:${esc(s.goal)}</div></div>`;
+        if(ci===1) return `<div class="chain-row" data-g="${s.g}" style="font-size:11px;color:var(--txt2);padding:7px 4px;border-bottom:1px dashed rgba(94,234,212,0.08);transition:.15s">
+          <div style="color:var(--cyan);font-family:var(--mono);font-size:10px">${s.g} ${esc(s.name)}</div>
+          <div class="chain">${s.chain.filter(x=>['推理','决策'].includes(x[0])).map(x=>'<b>'+esc(x[0])+'</b> '+esc(x[1])).join('<br>')}</div></div>`;
+        return `<div class="chain-row" data-g="${s.g}" style="font-size:11px;color:var(--txt2);padding:7px 4px;border-bottom:1px dashed rgba(94,234,212,0.08);transition:.15s">
+          <div style="color:var(--ok);font-family:var(--mono);font-size:10px">${s.g}</div>
+          <div class="chain">${s.chain.filter(x=>x[0]==='行动').map(x=>'<b>'+esc(x[0])+'</b> '+esc(x[1])).join('<br>')}</div></div>`;
+      }).join('')}
+    </div>`;
+  }).join('');
+}
+window.openScenario = function(g){
+  const s = SCENARIOS.find(x=>x.g===g); if(!s) return;
+  const wf = WHATIF[g];
+  const modal = document.createElement('div');
+  modal.id = 'scn-modal';
+  modal.style.cssText = 'position:fixed;inset:0;z-index:200;background:rgba(2,7,13,0.7);display:flex;align-items:center;justify-content:center';
+  modal.innerHTML = `<div class="glass" style="width:640px;max-width:94vw;padding:20px;max-height:92vh;overflow:auto">
+    <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">
+      <span class="scn-g">${s.g}</span><b style="color:var(--txt);font-size:15px">${esc(s.name)}</b>
+      <span class="tag" style="color:var(--cyan)">${esc(s.goal)}</span></div>
+    <div style="font-size:10px;color:var(--txt3);margin-bottom:10px">AI 推理过程 · 逐级推演</div>
+    <div id="scn-chain" style="font-size:11px;line-height:2.1;min-height:150px"></div>
+    ${wf?`<div style="margin-top:14px;padding:12px;background:rgba(94,234,212,0.04);border-radius:8px">
+      <div style="font-size:11px;color:var(--cyan);margin-bottom:8px">What-If 推演 · ${esc(wf.label)} <span id="whatif-val" class="mono" style="color:var(--ok);margin-left:6px">${wf.val}${wf.unit}</span></div>
+      <input type="range" id="whatif-slider" min="${wf.min}" max="${wf.max}" step="${wf.step}" value="${wf.val}" style="width:100%;accent-color:var(--cyan)">
+      <div id="whatif-result" style="font-size:12px;color:var(--ok);margin-top:6px;font-family:var(--mono)"></div>
+    </div>`:''}
+    <div style="margin-top:14px">
+      <div style="font-size:11px;color:var(--cyan);margin-bottom:8px">决策结果对比 <span class="en">BEFORE / AFTER</span></div>
+      <div id="whatif-chart" style="height:180px"></div>
+    </div>
+    <div style="margin-top:14px;display:flex;gap:8px;justify-content:flex-end">
+      <button class="speed-btn" style="padding:6px 14px;cursor:pointer" onclick="replayScenario()">↻ 重播推演</button>
+      <button class="speed-btn" style="padding:6px 16px;cursor:pointer" onclick="document.getElementById('scn-modal').remove()">关闭</button>
+    </div>
+  </div>`;
+  document.body.appendChild(modal);
+  modal.onclick = e => { if(e.target===modal) modal.remove(); };
+  window._curScenario = s;
+  animateChain(s);
+  if(wf){
+    const slider = document.getElementById('whatif-slider');
+    const result = document.getElementById('whatif-result');
+    const update = ()=>{ const v=+slider.value; result.textContent = wf.calc(v); const vv=document.getElementById('whatif-val'); if(vv) vv.textContent = v+wf.unit; renderWhatifChart(v); };
+    slider.oninput = update;
+    update();
+  } else {
+    renderWhatifChart(0);
+  }
+};
+function renderWhatifChart(v){
+  const el = document.getElementById('whatif-chart');
+  if(!el) return;
+  let ch = el._c;
+  if(!ch){ ch = echarts.init(el); el._c = ch; }
+  const gain = 8 + (v ? Math.round(v*2.2) : 0);
+  ch.setOption({
+    tooltip:{trigger:'axis'},
+    grid:{left:44,right:20,top:18,bottom:28},
+    xAxis:{type:'category', data:['决策前','决策后'], axisLabel:{color:'#9aa7bb'}, axisLine:{lineStyle:{color:'rgba(79,209,197,0.15)'}}},
+    yAxis:{type:'value', axisLabel:{color:'#6e7d92'}, splitLine:{lineStyle:{color:'rgba(79,209,197,0.08)'}}},
+    series:[{
+      type:'bar', barWidth:'36%',
+      data:[
+        {value:100, itemStyle:{color:'#f27070'}},
+        {value:100+gain, itemStyle:{color:'#34d399'}}
+      ],
+      label:{show:true, position:'top', color:'#eaeef6', fontSize:11, formatter:p=>p.value+'%'}
+    }]
+  });
+}
+function animateChain(s){
+  const el = document.getElementById('scn-chain');
+  if(!el) return;
+  el.innerHTML = '';
+  const icons = {'感知':'👁','推理':'🔍','决策':'⚡','行动':'▶'};
+  const colors = {'感知':'var(--cyan)','推理':'var(--warn)','决策':'#a78bfa','行动':'var(--ok)'};
+  s.chain.forEach((c, i)=>{
+    setTimeout(()=>{
+      const div = document.createElement('div');
+      const cc = colors[c[0]] || 'var(--cyan)';
+      div.style.cssText = 'padding:4px 0;padding-left:10px;border-left:2px solid '+cc+';animation:fadeUp 0.35s';
+      div.innerHTML = '<span style="color:'+cc+';font-family:var(--mono);font-size:10px">'+(icons[c[0]]||'')+' '+esc(c[0])+'</span> <span style="color:var(--txt2)">'+esc(c[1])+'</span>';
+      el.appendChild(div);
+      el.scrollTop = el.scrollHeight;
+      if(i===s.chain.length-1){
+        const done = document.createElement('div');
+        done.style.cssText = 'margin-top:10px;padding:8px;text-align:center;color:var(--ok);border:1px solid var(--ok);border-radius:6px;animation:fadeUp 0.4s';
+        done.innerHTML = '✓ 决策完成 · 可交由 Agent 执行';
+        el.appendChild(done);
+      }
+    }, 150 + i*420);
+  });
+}
+window.replayScenario = function(){
+  if(window._curScenario) animateChain(window._curScenario);
+};
+// 三列联动高亮(hover 感知列卡片 → 决策/行动列对应行高亮)
+window.highlightCockpit = function(g){
+  document.querySelectorAll('#cockpit-content .chain-row').forEach(el=>{
+    el.style.background = el.dataset.g===g ? 'rgba(94,234,212,0.08)' : 'transparent';
+    el.style.borderLeft = el.dataset.g===g ? '2px solid var(--cyan)' : '2px solid transparent';
+  });
+};
+window.clearCockpitHighlight = function(){
+  document.querySelectorAll('#cockpit-content .chain-row').forEach(el=>{
+    el.style.background = 'transparent';
+    el.style.borderLeft = '2px solid transparent';
+  });
+};
+
+/* ================================================================
+ * 主循环 + 尺寸
+ * ================================================================ */
+let lastFps = 0, fpsFrames = 0, fpsTime = performance.now();
+function mainLoop(){
+  requestAnimationFrame(mainLoop);
+  const t = performance.now()/1000;
+  // FPS
+  fpsFrames++;
+  if(performance.now()-fpsTime > 1000){
+    document.getElementById('hud-fps').textContent = fpsFrames;
+    fpsFrames=0; fpsTime=performance.now();
+  }
+  if(currentPage==='overview' && scenes.overview) scenes.overview.animate(t);
+  if(currentPage==='graph' && scenes.graph) scenes.graph.animate(t);
+}
+addEventListener('resize', ()=>{
+  if(scenes.overview) scenes.overview.resize();
+  if(scenes.graph) scenes.graph.resize();
+  charts.forEach(c=>{ try{c.resize()}catch(e){} });
+});
+
+/* ================= 启动 ================= */
+try{ initOverview(); pageInited.overview = true; }catch(e){ console.error('overview init:', e); }
+mainLoop();
+applyHash(); // URL 带 #page 时切换
+</script>
+
+<!-- 智能问答悬浮窗 -->
+<div id="qa-float" style="position:fixed;right:16px;bottom:16px;z-index:300;width:380px;max-width:92vw;background:rgba(10,16,28,0.94);backdrop-filter:blur(14px);border:1px solid var(--line);border-radius:12px;overflow:hidden;box-shadow:0 8px 32px rgba(0,0,0,0.55);transition:.25s;display:none">
+  <div id="qa-header" style="padding:11px 14px;display:flex;align-items:center;gap:8px;cursor:pointer;background:rgba(94,234,212,0.08);border-bottom:1px solid var(--line2)" onclick="toggleQA()">
+    <span style="font-size:13px;color:var(--cyan);font-weight:600">🤖 智能问答</span>
+    <span style="font-size:9px;color:var(--txt3)">AI 经营助手</span>
+    <span style="margin-left:auto;font-size:10px;color:var(--txt3)" id="qa-toggle-ico">▲</span>
+  </div>
+  <div id="qa-body" style="padding:12px;display:flex;flex-direction:column;gap:8px;max-height:58vh;overflow:auto"></div>
+</div>
+<script>renderQA();</script>
+</body>
+</html>
